@@ -27,6 +27,7 @@ const CATEGORIES = [
   { name: '스타일', color: 0xff85a2, keys: ['fashion','style','패션','beauty','makeup','스타일','haul','outfit','skincare'] },
 ]
 const FALLBACK_CAT = { name: '기타', color: 0x888888, keys: [] }
+const WEIGHTS = [0.5, 0.3, 0.2]
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
 const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
