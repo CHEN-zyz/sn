@@ -7,30 +7,32 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
+import { createNoise3D } from 'simplex-noise'
 import './style.css'
 
 const CATEGORIES = [
-  { name: '뉴스·시사', color: 0x4a90d9 },
-  { name: '경제·시장·투자', color: 0x50c878 },
-  { name: '요리', color: 0xf0756b },
-  { name: '게임', color: 0xffa83a },
-  { name: '스포츠', color: 0x5ee8a0 },
-  { name: '소프트웨어·데이터·AI', color: 0x7ab8ff },
-  { name: '환경·기후', color: 0x37e0c8 },
-  { name: '광고·마케팅', color: 0xb98cff },
-  { name: '음악', color: 0xff6b9d },
-  { name: '디자인·예술', color: 0xc084fc },
-  { name: '여행', color: 0x41cbff },
-  { name: '영감·인사이트', color: 0xffd700 },
-  { name: '학습', color: 0x64dfdf },
-  { name: '스타일', color: 0xff85a2 },
+  { name: '뉴스·시사', color: 0x4a90d9, keys: ['news','뉴스','시사','정치','politics','current'] },
+  { name: '경제·투자', color: 0x50c878, keys: ['경제','finance','invest','stock','crypto','money','market','부동산'] },
+  { name: '요리', color: 0xf0756b, keys: ['cook','recipe','먹방','요리','food','baking','맛집','mukbang'] },
+  { name: '게임', color: 0xffa83a, keys: ['game','gaming','게임','gamer','play','minecraft','fortnite','lol','valorant'] },
+  { name: '스포츠', color: 0x5ee8a0, keys: ['sport','축구','야구','basketball','soccer','football','운동','workout','fitness'] },
+  { name: '소프트웨어·AI', color: 0x7ab8ff, keys: ['code','coding','programming','개발','software','ai','machine learning','python','javascript','데이터'] },
+  { name: '환경·기후', color: 0x37e0c8, keys: ['climate','환경','environment','green','sustainability','eco','재활용'] },
+  { name: '광고·마케팅', color: 0xb98cff, keys: ['marketing','마케팅','광고','brand','branding','seo','digital marketing'] },
+  { name: '음악', color: 0xff6b9d, keys: ['music','음악','song','album','concert','mv','lyrics','guitar','piano','cover'] },
+  { name: '디자인·예술', color: 0xc084fc, keys: ['design','디자인','art','예술','illustration','figma','photoshop','drawing','ui','ux'] },
+  { name: '여행', color: 0x41cbff, keys: ['travel','여행','vlog','trip','tour','hotel','flight','관광'] },
+  { name: '영감·인사이트', color: 0xffd700, keys: ['inspire','motivation','ted','insight','인사이트','self','mindset','성장'] },
+  { name: '학습', color: 0x64dfdf, keys: ['learn','교육','tutorial','lecture','study','course','how to','강의','수학','science','english'] },
+  { name: '스타일', color: 0xff85a2, keys: ['fashion','style','패션','beauty','makeup','스타일','haul','outfit','skincare'] },
 ]
-const WEIGHTS = [0.5, 0.3, 0.2]
+const FALLBACK_CAT = { name: '기타', color: 0x888888, keys: [] }
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
 const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
 const easeOutBack = (k) => { const c = 1.4; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2) }
 const _v = new THREE.Vector3()
+const noise3D = createNoise3D()
 
 const corals = []
 let coralTemplate = null
@@ -70,9 +72,7 @@ scene.add(new THREE.HemisphereLight(0x2a4a6a, 0x05080d, 0.35))
 const keyLight = new THREE.DirectionalLight(0xbfe0ff, 0.8)
 keyLight.position.set(3, 8, 5)
 scene.add(keyLight)
-const fillLight = new THREE.DirectionalLight(0x4488cc, 0.3)
-fillLight.position.set(-4, 2, -3)
-scene.add(fillLight)
+scene.add(new THREE.DirectionalLight(0x4488cc, 0.3).translateX(-4).translateY(2).translateZ(-3))
 
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
@@ -87,13 +87,70 @@ scene.add(reef)
 
 new GLTFLoader().load(
   '/models/coral.glb',
-  (gltf) => {
-    coralTemplate = gltf.scene
-    addBtn.style.display = ''
-  },
+  (gltf) => { coralTemplate = gltf.scene; addBtn.style.display = ''; uploadBtn.style.display = '' },
   undefined,
   (err) => console.warn('coral.glb load failed', err),
 )
+
+function classifyTitle(title) {
+  const lower = title.toLowerCase()
+  let best = null, bestCount = 0
+  for (const cat of CATEGORIES) {
+    const hits = cat.keys.filter((k) => lower.includes(k)).length
+    if (hits > bestCount) { bestCount = hits; best = cat }
+  }
+  return best || FALLBACK_CAT
+}
+
+function parseWatchHistory(json) {
+  const stats = new Map()
+  const now = Date.now()
+  let entries
+  try { entries = typeof json === 'string' ? JSON.parse(json) : json } catch { return [] }
+  if (!Array.isArray(entries)) return []
+
+  for (const entry of entries) {
+    if (!entry.title || !entry.titleUrl) continue
+    const title = entry.title.replace(/^Watched\s+/, '')
+    const cat = classifyTitle(title)
+    const channel = entry.subtitles && entry.subtitles[0] ? entry.subtitles[0].name : 'unknown'
+    const time = entry.time ? new Date(entry.time).getTime() : 0
+    const daysSince = time ? (now - time) / 86400000 : 999
+
+    if (!stats.has(cat.name)) stats.set(cat.name, { cat, count: 0, channels: new Set(), recentMin: 999, timestamps: [] })
+    const s = stats.get(cat.name)
+    s.count++
+    s.channels.add(channel)
+    s.recentMin = Math.min(s.recentMin, daysSince)
+    s.timestamps.push(time)
+  }
+
+  const total = Array.from(stats.values()).reduce((s, v) => s + v.count, 0) || 1
+  const result = Array.from(stats.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+    .map((s) => {
+      const trend = computeTrend(s.timestamps)
+      return {
+        cat: s.cat,
+        weight: s.count / total,
+        count: s.count,
+        diversity: s.channels.size,
+        recency: clamp(1 - s.recentMin / 90, 0, 1),
+        trend,
+      }
+    })
+  return result
+}
+
+function computeTrend(timestamps) {
+  if (timestamps.length < 4) return 0
+  const sorted = timestamps.sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  const firstHalf = mid
+  const secondHalf = sorted.length - mid
+  return clamp((secondHalf - firstHalf) / (firstHalf + secondHalf), -1, 1)
+}
 
 function findPlacement() {
   if (corals.length === 0) return new THREE.Vector3(0, 0, 0)
@@ -110,7 +167,24 @@ function findPlacement() {
   return new THREE.Vector3((Math.random() - 0.5) * 6, 0, (Math.random() - 0.5) * 6)
 }
 
-function addCoral(cats) {
+function displaceVertices(inner, amplitude) {
+  inner.traverse((o) => {
+    if (!o.isMesh || !o.geometry) return
+    const pos = o.geometry.attributes.position
+    if (!pos) return
+    const arr = pos.array
+    for (let i = 0; i < arr.length; i += 3) {
+      const n = noise3D(arr[i] * 2, arr[i + 1] * 2, arr[i + 2] * 2) * amplitude
+      arr[i] += n * 0.15
+      arr[i + 1] += n * 0.15
+      arr[i + 2] += n * 0.15
+    }
+    pos.needsUpdate = true
+    o.geometry.computeVertexNormals()
+  })
+}
+
+function addCoralFromData(data) {
   if (!coralTemplate) return
   const group = new THREE.Group()
   const inner = coralTemplate.clone(true)
@@ -120,21 +194,27 @@ function addCoral(cats) {
   const size = box.getSize(new THREE.Vector3())
   const center = box.getCenter(new THREE.Vector3())
   const maxDim = Math.max(size.x, size.y, size.z) || 1
-  const norm = 1.2 / maxDim
-  inner.position.sub(center)
+  const baseNorm = 1.2 / maxDim
 
-  const primaryColor = new THREE.Color(cats[0].cat.color)
+  const yStretch = 1 + data.weight * 1.5
+  const xzGirth = 0.7 + Math.min(data.diversity / 15, 1) * 0.6
+
+  const color = new THREE.Color(data.cat.color)
   const mats = []
   inner.traverse((o) => {
     if (o.isMesh && o.material) {
       o.material = o.material.clone()
       o.material.transparent = true
-      o.material.opacity = 1
-      o.material.emissive = primaryColor.clone()
-      o.material.emissiveIntensity = 0.2
+      o.material.opacity = 0.4 + data.weight * 0.6
+      o.material.emissive = color.clone()
+      o.material.emissiveIntensity = 0.1 + data.recency * 0.5
+      o.material.roughness = 0.3 + (1 - Math.min(data.diversity / 15, 1)) * 0.5
       mats.push(o.material)
     }
   })
+
+  displaceVertices(inner, 0.15 + data.weight * 0.25)
+  inner.position.sub(center)
 
   const pos = findPlacement()
   group.position.copy(pos)
@@ -143,22 +223,25 @@ function addCoral(cats) {
   group.rotation.z = (Math.random() - 0.5) * 0.15
   group.scale.setScalar(0.001)
 
-  const topName = cats[0].cat.name
   const div = document.createElement('div')
   div.className = 'label'
-  div.style.borderColor = 'rgba(' + Math.round(primaryColor.r * 255) + ',' + Math.round(primaryColor.g * 255) + ',' + Math.round(primaryColor.b * 255) + ',0.45)'
-  div.textContent = topName
+  div.style.borderColor = 'rgba(' + Math.round(color.r * 255) + ',' + Math.round(color.g * 255) + ',' + Math.round(color.b * 255) + ',0.45)'
+  div.textContent = data.cat.name
   div.style.opacity = '0'
   const label = new CSS2DObject(div)
-  label.position.set(0, (size.y * norm) / 2 + 0.6, 0)
+  label.position.set(0, (size.y * baseNorm * yStretch) / 2 + 0.6, 0)
   label.layers.set(0)
   group.add(label)
 
+  const spinSpeed = 0.04 + clamp(data.trend + 0.5, 0, 1) * 0.12
+
   const obj = {
-    group, mats, color: primaryColor, baseScale: norm,
-    phase: Math.random() * 10, labelEl: div,
-    cats, growStart: timer.getElapsed(), grown: false,
+    group, mats, color, baseNorm, yStretch, xzGirth,
+    baseScale: baseNorm, phase: Math.random() * 10,
+    labelEl: div, data,
+    growStart: timer.getElapsed(), grown: false,
     fade: 1, fadeTarget: 1, removing: false, removeStart: 0,
+    spinSpeed, breathFreq: 0.5 + data.recency * 2,
   }
   group.userData.clusterRef = obj
   reef.add(group)
@@ -168,13 +251,24 @@ function addCoral(cats) {
   updateOverview()
 }
 
+function addCoralManual(cats) {
+  cats.forEach((entry, i) => {
+    const data = {
+      cat: entry.cat,
+      weight: [0.5, 0.3, 0.2][i] || 0.2,
+      count: 10,
+      diversity: 3 + Math.floor(Math.random() * 8),
+      recency: 0.8 - i * 0.2,
+      trend: 0.1,
+    }
+    addCoralFromData(data)
+  })
+}
+
 function removeCoral(c) {
   c.removing = true
   c.removeStart = timer.getElapsed()
-  if (focused === c) {
-    focused = null
-    hideDetail()
-  }
+  if (focused === c) { focused = null; hideDetail() }
   for (const o of corals) o.fadeTarget = 1
 }
 
@@ -184,54 +278,33 @@ function finishRemove(c) {
   if (idx >= 0) corals.splice(idx, 1)
   rebuildConnections()
   updateOverview()
-  if (focused) {
-    startCamTween(overviewPos, overviewTarget)
-    focused = null
-  }
 }
 
 let lineMesh = null
 function rebuildConnections() {
   if (lineMesh) { reef.remove(lineMesh); lineMesh.geometry.dispose(); lineMesh = null }
-  if (corals.length < 2) return
   const active = corals.filter((c) => !c.removing)
   if (active.length < 2) return
   const curves = []
   for (let i = 0; i < active.length; i++) {
-    const dists = active
-      .map((c, j) => ({ j, d: i === j ? Infinity : active[i].group.position.distanceTo(c.group.position) }))
-      .sort((a, b) => a.d - b.d)
-    const neighbors = Math.min(2, active.length - 1)
-    for (let k = 0; k < neighbors; k++) {
-      const a = active[i].group.position
-      const b = active[dists[k].j].group.position
+    const dists = active.map((c, j) => ({ j, d: i === j ? Infinity : active[i].group.position.distanceTo(c.group.position) })).sort((a, b) => a.d - b.d)
+    for (let k = 0; k < Math.min(2, active.length - 1); k++) {
+      const a = active[i].group.position, b = active[dists[k].j].group.position
       const mid = a.clone().add(b).multiplyScalar(0.5)
       mid.y += 0.3 + a.distanceTo(b) * 0.12
       curves.push(new THREE.QuadraticBezierCurve3(a.clone(), mid, b.clone()))
     }
   }
   const verts = []
-  curves.forEach((c) => {
-    const pts = c.getPoints(20)
-    for (let k = 0; k < pts.length - 1; k++) {
-      verts.push(pts[k].x, pts[k].y, pts[k].z, pts[k + 1].x, pts[k + 1].y, pts[k + 1].z)
-    }
-  })
+  curves.forEach((c) => { const pts = c.getPoints(20); for (let k = 0; k < pts.length - 1; k++) verts.push(pts[k].x, pts[k].y, pts[k].z, pts[k + 1].x, pts[k + 1].y, pts[k + 1].z) })
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
-  lineMesh = new THREE.LineSegments(
-    geo,
-    new THREE.LineBasicMaterial({ color: 0x4ac8ff, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false, fog: true }),
-  )
+  lineMesh = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x4ac8ff, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false, fog: true }))
   reef.add(lineMesh)
 }
 
 function updateOverview() {
-  if (corals.length === 0) {
-    overviewPos.set(0, 2, 8)
-    overviewTarget.set(0, 0, 0)
-    return
-  }
+  if (corals.length === 0) { overviewPos.set(0, 2, 8); overviewTarget.set(0, 0, 0); return }
   const box = new THREE.Box3()
   for (const c of corals) if (!c.removing) box.expandByObject(c.group)
   if (box.isEmpty()) return
@@ -241,31 +314,17 @@ function updateOverview() {
   overviewPos.set(center.x, center.y + sphere.radius * 0.4, center.z + Math.max(sphere.radius * 2.2, 5))
 }
 
-const FLOW_MAX = 3000
-const FLOW_RADIUS = 4
-const FLOW_SPEED = 0.3
-const flowPos = new Float32Array(FLOW_MAX * 3)
-const flowCol = new Float32Array(FLOW_MAX * 3)
-const flowSeed = new Float32Array(FLOW_MAX)
+const FLOW_MAX = 3000, FLOW_RADIUS = 4, FLOW_SPEED = 0.3
+const flowPos = new Float32Array(FLOW_MAX * 3), flowCol = new Float32Array(FLOW_MAX * 3), flowSeed = new Float32Array(FLOW_MAX)
 for (let i = 0; i < FLOW_MAX; i++) {
-  const r = FLOW_RADIUS * Math.cbrt(Math.random())
-  const th = Math.acos(2 * Math.random() - 1)
-  const ph = Math.random() * Math.PI * 2
-  flowPos[i * 3] = r * Math.sin(th) * Math.cos(ph)
-  flowPos[i * 3 + 1] = r * Math.sin(th) * Math.sin(ph)
-  flowPos[i * 3 + 2] = r * Math.cos(th)
-  const b = 0.3 + Math.random() * 0.7
-  flowCol[i * 3] = flowCol[i * 3 + 1] = flowCol[i * 3 + 2] = b
-  flowSeed[i] = Math.random() * 1000
+  const r = FLOW_RADIUS * Math.cbrt(Math.random()), th = Math.acos(2 * Math.random() - 1), ph = Math.random() * Math.PI * 2
+  flowPos[i * 3] = r * Math.sin(th) * Math.cos(ph); flowPos[i * 3 + 1] = r * Math.sin(th) * Math.sin(ph); flowPos[i * 3 + 2] = r * Math.cos(th)
+  const b = 0.3 + Math.random() * 0.7; flowCol[i * 3] = flowCol[i * 3 + 1] = flowCol[i * 3 + 2] = b; flowSeed[i] = Math.random() * 1000
 }
 const flowGeo = new THREE.BufferGeometry()
 flowGeo.setAttribute('position', new THREE.BufferAttribute(flowPos, 3))
 flowGeo.setAttribute('color', new THREE.BufferAttribute(flowCol, 3))
-scene.add(new THREE.Points(flowGeo, new THREE.PointsMaterial({
-  size: 0.04, color: 0x5ad0ff, vertexColors: true, transparent: true,
-  blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
-})))
-
+scene.add(new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: 0.04, color: 0x5ad0ff, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })))
 function updateFlow(dt, t) {
   const wrap = (v) => (v > FLOW_RADIUS ? v - 2 * FLOW_RADIUS : v < -FLOW_RADIUS ? v + 2 * FLOW_RADIUS : v)
   for (let i = 0; i < FLOW_MAX; i++) {
@@ -277,47 +336,24 @@ function updateFlow(dt, t) {
   flowGeo.attributes.position.needsUpdate = true
 }
 
-const SNOW = 800
-const snowBox = { x: 8, yTop: 7, yBot: -5, z: 8 }
+const SNOW = 800, snowBox = { x: 8, yTop: 7, yBot: -5, z: 8 }
 const snowPos = new Float32Array(SNOW * 3)
-for (let i = 0; i < SNOW; i++) {
-  snowPos[i * 3] = (Math.random() * 2 - 1) * snowBox.x
-  snowPos[i * 3 + 1] = snowBox.yBot + Math.random() * (snowBox.yTop - snowBox.yBot)
-  snowPos[i * 3 + 2] = (Math.random() * 2 - 1) * snowBox.z
-}
+for (let i = 0; i < SNOW; i++) { snowPos[i * 3] = (Math.random() * 2 - 1) * snowBox.x; snowPos[i * 3 + 1] = snowBox.yBot + Math.random() * (snowBox.yTop - snowBox.yBot); snowPos[i * 3 + 2] = (Math.random() * 2 - 1) * snowBox.z }
 const snowGeo = new THREE.BufferGeometry()
 snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3))
-scene.add(new THREE.Points(snowGeo, new THREE.PointsMaterial({
-  size: 0.025, color: 0x8abbd6, transparent: true, opacity: 0.45,
-  blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
-})))
+scene.add(new THREE.Points(snowGeo, new THREE.PointsMaterial({ size: 0.025, color: 0x8abbd6, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })))
 
-function makeShaftTexture() {
-  const c = document.createElement('canvas')
-  c.width = 32; c.height = 256
-  const ctx = c.getContext('2d')
-  const g = ctx.createLinearGradient(0, 0, 0, 256)
-  g.addColorStop(0, 'rgba(140,200,255,0.4)')
-  g.addColorStop(0.5, 'rgba(130,190,255,0.1)')
-  g.addColorStop(1, 'rgba(130,190,255,0)')
+function makeShaftTex() {
+  const c = document.createElement('canvas'); c.width = 32; c.height = 256
+  const ctx = c.getContext('2d'), g = ctx.createLinearGradient(0, 0, 0, 256)
+  g.addColorStop(0, 'rgba(140,200,255,0.4)'); g.addColorStop(0.5, 'rgba(130,190,255,0.1)'); g.addColorStop(1, 'rgba(130,190,255,0)')
   ctx.fillStyle = g; ctx.fillRect(0, 0, 32, 256)
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  return t
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t
 }
-const shaftTex = makeShaftTexture()
-const shafts = []
+const shaftTex = makeShaftTex(), shafts = []
 for (let i = 0; i < 3; i++) {
-  const m = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.5, 16),
-    new THREE.MeshBasicMaterial({ map: shaftTex, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }),
-  )
-  const bx = (i - 1) * 3
-  m.position.set(bx, 5, -2 - i * 0.5)
-  m.rotation.z = (i % 2 ? 1 : -1) * 0.12
-  m.userData.bx = bx
-  shafts.push(m)
-  scene.add(m)
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 16), new THREE.MeshBasicMaterial({ map: shaftTex, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }))
+  const bx = (i - 1) * 3; m.position.set(bx, 5, -2 - i * 0.5); m.rotation.z = (i % 2 ? 1 : -1) * 0.12; m.userData.bx = bx; shafts.push(m); scene.add(m)
 }
 
 const composer = new EffectComposer(renderer)
@@ -330,12 +366,68 @@ title.id = 'site-title'
 title.innerHTML = '<small>Start your exploration with</small><span>CORALITHM</span>'
 document.body.appendChild(title)
 
+const btnRow = document.createElement('div')
+btnRow.id = 'btn-row'
+document.body.appendChild(btnRow)
+
 const addBtn = document.createElement('button')
 addBtn.id = 'add-btn'
 addBtn.textContent = '+ 산호 추가'
 addBtn.style.display = 'none'
 addBtn.addEventListener('click', openModal)
-document.body.appendChild(addBtn)
+btnRow.appendChild(addBtn)
+
+const uploadBtn = document.createElement('button')
+uploadBtn.id = 'upload-btn'
+uploadBtn.textContent = '📂 YouTube 데이터 업로드'
+uploadBtn.style.display = 'none'
+uploadBtn.addEventListener('click', () => fileInput.click())
+btnRow.appendChild(uploadBtn)
+
+const tutorialBtn = document.createElement('button')
+tutorialBtn.id = 'tutorial-btn'
+tutorialBtn.textContent = '?'
+tutorialBtn.addEventListener('click', openTutorial)
+document.body.appendChild(tutorialBtn)
+
+const fileInput = document.createElement('input')
+fileInput.type = 'file'
+fileInput.accept = '.json'
+fileInput.style.display = 'none'
+document.body.appendChild(fileInput)
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    const data = parseWatchHistory(ev.target.result)
+    if (data.length === 0) { alert('데이터를 찾을 수 없습니다. watch-history.json 파일인지 확인해주세요.'); return }
+    corals.filter((c) => !c.removing).forEach((c) => removeCoral(c))
+    setTimeout(() => { data.forEach((d) => addCoralFromData(d)) }, 1000)
+  }
+  reader.readAsText(file)
+  fileInput.value = ''
+})
+
+const tutorialOverlay = document.createElement('div')
+tutorialOverlay.className = 'modal-overlay'
+tutorialOverlay.innerHTML =
+  '<div class="modal-content" style="position:relative;max-width:560px;text-align:left">' +
+  '<button class="modal-close">&times;</button>' +
+  '<h2>YouTube 데이터 가져오기</h2>' +
+  '<div class="tutorial-steps">' +
+  '<div class="step"><span class="step-num">1</span><a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a> 에 접속합니다</div>' +
+  '<div class="step"><span class="step-num">2</span>"모두 선택 해제" 를 누른 뒤 <b>YouTube 및 YouTube Music</b> 만 체크합니다</div>' +
+  '<div class="step"><span class="step-num">3</span>"모든 YouTube 데이터 포함" → <b>시청 기록</b>만 선택, 형식을 <b>JSON</b>으로 변경합니다</div>' +
+  '<div class="step"><span class="step-num">4</span>"내보내기 만들기" → 완료되면 ZIP 다운로드 → 압축 해제</div>' +
+  '<div class="step"><span class="step-num">5</span>폴더 안의 <b>watch-history.json</b> 파일을 이 페이지에 업로드합니다</div>' +
+  '</div>' +
+  '<p style="margin-top:16px;font-size:11px;opacity:0.5">데이터는 브라우저에서만 처리되며 외부로 전송되지 않습니다.</p>' +
+  '</div>'
+document.body.appendChild(tutorialOverlay)
+tutorialOverlay.querySelector('.modal-close').addEventListener('click', () => tutorialOverlay.classList.remove('show'))
+tutorialOverlay.addEventListener('click', (e) => { if (e.target === tutorialOverlay) tutorialOverlay.classList.remove('show') })
+function openTutorial() { tutorialOverlay.classList.add('show') }
 
 const modalOverlay = document.createElement('div')
 modalOverlay.className = 'modal-overlay'
@@ -353,7 +445,8 @@ document.body.appendChild(modalOverlay)
 
 const catGrid = modalContent.querySelector('.cat-grid')
 const genBtn = modalContent.querySelector('#generate-btn')
-const closeBtn = modalContent.querySelector('.modal-close')
+modalContent.querySelector('.modal-close').addEventListener('click', closeModal)
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal() })
 let selected = []
 
 CATEGORIES.forEach((cat) => {
@@ -362,11 +455,8 @@ CATEGORIES.forEach((cat) => {
   tag.textContent = cat.name
   tag.addEventListener('click', () => {
     const idx = selected.indexOf(cat)
-    if (idx >= 0) {
-      selected.splice(idx, 1)
-    } else if (selected.length < 3) {
-      selected.push(cat)
-    }
+    if (idx >= 0) selected.splice(idx, 1)
+    else if (selected.length < 3) selected.push(cat)
     updateTagStates()
   })
   tag.dataset.catName = cat.name
@@ -380,32 +470,18 @@ function updateTagStates() {
     el.classList.toggle('selected', idx >= 0)
     const existing = el.querySelector('.order')
     if (existing) existing.remove()
-    if (idx >= 0) {
-      const badge = document.createElement('span')
-      badge.className = 'order'
-      badge.textContent = String(idx + 1)
-      el.appendChild(badge)
-    }
+    if (idx >= 0) { const b = document.createElement('span'); b.className = 'order'; b.textContent = String(idx + 1); el.appendChild(b) }
   })
   genBtn.disabled = selected.length !== 3
 }
 
-function openModal() {
-  selected = []
-  updateTagStates()
-  modalOverlay.classList.add('show')
-}
-function closeModal() {
-  modalOverlay.classList.remove('show')
-}
-closeBtn.addEventListener('click', closeModal)
-modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal() })
-
+function openModal() { selected = []; updateTagStates(); modalOverlay.classList.add('show') }
+function closeModal() { modalOverlay.classList.remove('show') }
 genBtn.addEventListener('click', () => {
   if (selected.length !== 3) return
-  const cats = selected.map((cat, i) => ({ cat, weight: WEIGHTS[i] }))
+  const cats = selected.map((cat) => ({ cat }))
   closeModal()
-  addCoral(cats)
+  addCoralManual(cats)
 })
 
 const detail = document.createElement('div')
@@ -417,22 +493,18 @@ vignette.id = 'vignette'
 document.body.appendChild(vignette)
 
 function showDetail(c) {
-  let html = '<h2>' + c.cats[0].cat.name + '</h2>'
-  c.cats.forEach((entry) => {
-    const hex = '#' + new THREE.Color(entry.cat.color).getHexString()
-    const pct = Math.round(entry.weight * 100)
-    html += '<div class="row"><span class="dot" style="background:' + hex + '"></span>' + entry.cat.name + ' · ' + pct + '%</div>'
-  })
+  const d = c.data
+  let html = '<h2>' + d.cat.name + '</h2>'
+  html += '<div class="row"><span class="dot" style="background:#' + c.color.getHexString() + '"></span>비중 · ' + Math.round(d.weight * 100) + '%</div>'
+  html += '<div class="row">시청 수 · ' + d.count + '회</div>'
+  html += '<div class="row">채널 다양성 · ' + d.diversity + '개</div>'
+  html += '<div class="row">최근 활성도 · ' + (d.recency > 0.6 ? '높음' : d.recency > 0.3 ? '보통' : '낮음') + '</div>'
   html += '<button id="delete-btn">산호 삭제</button>'
   detail.innerHTML = html
   detail.classList.add('show')
-  detail.querySelector('#delete-btn').addEventListener('click', () => {
-    if (focused) removeCoral(focused)
-  })
+  detail.querySelector('#delete-btn').addEventListener('click', () => { if (focused) removeCoral(focused) })
 }
-function hideDetail() {
-  detail.classList.remove('show')
-}
+function hideDetail() { detail.classList.remove('show') }
 
 const raycaster = new THREE.Raycaster()
 let pointerStart = null
@@ -442,21 +514,14 @@ function startCamTween(toPos, toTarget) {
 }
 function updateCamTween() {
   if (!camTween) return
-  let k = (timer.getElapsed() - camTween.t0) / camTween.dur
-  if (k >= 1) k = 1
+  let k = (timer.getElapsed() - camTween.t0) / camTween.dur; if (k >= 1) k = 1
   const a = easeInOut(k)
   camera.position.lerpVectors(camTween.fromPos, camTween.toPos, a)
   controls.target.lerpVectors(camTween.fromTar, camTween.toTar, a)
   if (k >= 1) camTween = null
 }
 
-function pickCluster(o) {
-  while (o) {
-    if (o.userData && o.userData.clusterRef) return o.userData.clusterRef
-    o = o.parent
-  }
-  return null
-}
+function pickCluster(o) { while (o) { if (o.userData && o.userData.clusterRef) return o.userData.clusterRef; o = o.parent } return null }
 function focusCluster(c) {
   if (c.removing) return
   focused = c
@@ -467,15 +532,11 @@ function focusCluster(c) {
   for (const o of corals) o.fadeTarget = (o === c) ? 1 : 0.12
 }
 function resetView() {
-  focused = null
-  startCamTween(overviewPos, overviewTarget)
-  hideDetail()
+  focused = null; startCamTween(overviewPos, overviewTarget); hideDetail()
   for (const o of corals) o.fadeTarget = 1
 }
 
-renderer.domElement.addEventListener('pointerdown', (e) => {
-  pointerStart = { x: e.clientX, y: e.clientY, t: performance.now() }
-})
+renderer.domElement.addEventListener('pointerdown', (e) => { pointerStart = { x: e.clientX, y: e.clientY, t: performance.now() } })
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!pointerStart) return
   const moved = Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y)
@@ -492,13 +553,9 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 })
 
 function onResize() {
-  const w = window.innerWidth
-  const h = window.innerHeight
-  camera.aspect = w / h
-  camera.updateProjectionMatrix()
-  renderer.setSize(w, h)
-  composer.setSize(w, h)
-  labelRenderer.setSize(w, h)
+  const w = window.innerWidth, h = window.innerHeight
+  camera.aspect = w / h; camera.updateProjectionMatrix()
+  renderer.setSize(w, h); composer.setSize(w, h); labelRenderer.setSize(w, h)
 }
 window.addEventListener('resize', onResize)
 
@@ -514,11 +571,9 @@ renderer.setAnimationLoop((time) => {
 
   for (let ci = corals.length - 1; ci >= 0; ci--) {
     const c = corals[ci]
-
     if (c.removing) {
-      const re = t - c.removeStart
-      const rk = clamp(1 - re / 0.8, 0, 1)
-      c.group.scale.setScalar(c.baseScale * rk * rk)
+      const rk = clamp(1 - (t - c.removeStart) / 0.8, 0, 1)
+      c.group.scale.setScalar(c.baseNorm * rk * rk)
       for (const m of c.mats) m.opacity = rk
       c.labelEl.style.opacity = String(rk)
       if (rk <= 0) finishRemove(c)
@@ -531,45 +586,38 @@ renderer.setAnimationLoop((time) => {
     else if (!c.grown) c.grown = true
 
     c.fade += (c.fadeTarget - c.fade) * 0.08
-
-    const p = 0.5 + 0.5 * Math.sin(t * 1.0 + c.phase)
+    const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
-      m.emissiveIntensity = (0.12 + 0.2 * p) * growK * c.fade
-      m.opacity = clamp(c.fade, 0.08, 1)
+      m.emissiveIntensity = (0.1 + 0.3 * p) * growK * c.fade * c.data.recency
+      m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6), 0.08, 1)
     }
     const scaleFade = 0.7 + 0.3 * c.fade
-    c.group.scale.setScalar(c.baseScale * growK * scaleFade * (1 + 0.02 * Math.sin(t * 0.7 + c.phase)))
+    const breathScale = 1 + 0.02 * Math.sin(t * c.breathFreq + c.phase)
+    c.group.scale.set(
+      c.baseNorm * c.xzGirth * growK * scaleFade * breathScale,
+      c.baseNorm * c.yStretch * growK * scaleFade * breathScale,
+      c.baseNorm * c.xzGirth * growK * scaleFade * breathScale,
+    )
+    if (!focused) c.group.rotation.y += c.spinSpeed * dt
+
     const d = camera.position.distanceTo(c.group.getWorldPosition(_v))
-    const op = clamp(1.4 - d / 14, 0.1, 1) * growK * c.fade
-    c.labelEl.style.opacity = String(op)
+    c.labelEl.style.opacity = String(clamp(1.4 - d / 14, 0.1, 1) * growK * c.fade)
   }
 
   if (lineMesh) {
     const allGrown = corals.every((c) => c.grown || c.removing)
-    const lineTarget = allGrown && corals.length >= 2 ? 0.1 + 0.08 * (0.5 + 0.5 * Math.sin(t * 0.7)) : 0
-    lineMesh.material.opacity += (lineTarget - lineMesh.material.opacity) * 0.05
+    const lt = allGrown && corals.length >= 2 ? 0.1 + 0.08 * (0.5 + 0.5 * Math.sin(t * 0.7)) : 0
+    lineMesh.material.opacity += (lt - lineMesh.material.opacity) * 0.05
   }
 
   updateFlow(dt, t)
-
-  for (let i = 0; i < SNOW; i++) {
-    const i3 = i * 3
-    snowPos[i3 + 1] -= dt * (0.18 + (i % 5) * 0.04)
-    snowPos[i3] += Math.sin(t * 0.25 + i) * 0.001
-    if (snowPos[i3 + 1] < snowBox.yBot) snowPos[i3 + 1] = snowBox.yTop
-  }
+  for (let i = 0; i < SNOW; i++) { const i3 = i * 3; snowPos[i3 + 1] -= dt * (0.18 + (i % 5) * 0.04); snowPos[i3] += Math.sin(t * 0.25 + i) * 0.001; if (snowPos[i3 + 1] < snowBox.yBot) snowPos[i3 + 1] = snowBox.yTop }
   snowGeo.attributes.position.needsUpdate = true
-
-  shafts.forEach((s, i) => {
-    s.material.opacity = 0.03 + 0.025 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))
-    s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4
-  })
+  shafts.forEach((s, i) => { s.material.opacity = 0.03 + 0.025 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5)); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
 
   if (camTween) updateCamTween()
   else controls.update()
-
   composer.render()
   labelRenderer.render(scene, camera)
 })
-
 onResize()
