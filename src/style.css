@@ -1,0 +1,97 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+  background: #000;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+canvas {
+  display: block;
+}
+
+.label {
+  padding: 4px 11px;
+  border-radius: 9px;
+  background: rgba(8, 14, 22, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e8f2ff;
+  font-size: 12px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  text-shadow: 0 0 8px rgba(120, 200, 255, 0.5);
+  transition: opacity 0.25s;
+  user-select: none;
+}
+
+#detail-panel {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  min-width: 210px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: rgba(8, 14, 22, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  color: #cfe0f0;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+}
+#detail-panel.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+#detail-panel h2 {
+  font-size: 21px;
+  color: #fff;
+  margin-bottom: 9px;
+  letter-spacing: 1px;
+}
+#detail-panel .row {
+  font-size: 12px;
+  opacity: 0.82;
+  line-height: 1.9;
+  letter-spacing: 0.5px;
+}
+#detail-panel .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+#hint {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(180, 210, 235, 0.45);
+  pointer-events: none;
+  user-select: none;
+}
+
+#vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+}
