@@ -170,11 +170,12 @@ function findPlacement() {
     const n = Math.max(6, r * 5)
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + r * 0.7
-      const pos = new THREE.Vector3(Math.cos(a) * radius, 0, Math.sin(a) * radius)
+      const y = (Math.sin(a * 2.3 + r) * 0.8 + (Math.random() - 0.5) * 0.6)
+      const pos = new THREE.Vector3(Math.cos(a) * radius, y, Math.sin(a) * radius)
       if (corals.every((c) => c.group.position.distanceTo(pos) > minDist)) return pos
     }
   }
-  return new THREE.Vector3((Math.random() - 0.5) * 6, 0, (Math.random() - 0.5) * 6)
+  return new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 6)
 }
 
 function displaceVertices(inner, amplitude) {
@@ -269,17 +270,16 @@ function addCoralFromData(data) {
 }
 
 function addCoralManual(cats) {
-  cats.forEach((entry, i) => {
-    const data = {
-      cat: entry.cat,
-      weight: [0.5, 0.3, 0.2][i] || 0.2,
-      count: 10,
-      diversity: 3 + Math.floor(Math.random() * 8),
-      recency: 0.8 - i * 0.2,
-      trend: 0.1,
-    }
-    addCoralFromData(data)
-  })
+  const data = {
+    cat: cats[0].cat,
+    weight: 0.5,
+    count: 10,
+    diversity: 3 + Math.floor(Math.random() * 8),
+    recency: 0.8,
+    trend: 0.1,
+    subcats: cats.map((c, i) => ({ cat: c.cat, weight: WEIGHTS[i] })),
+  }
+  addCoralFromData(data)
 }
 
 function removeCoral(c) {
@@ -512,7 +512,14 @@ document.body.appendChild(vignette)
 function showDetail(c) {
   const d = c.data
   let html = '<h2>' + d.cat.name + '</h2>'
-  html += '<div class="row"><span class="dot" style="background:#' + c.color.getHexString() + '"></span>비중 · ' + Math.round(d.weight * 100) + '%</div>'
+  if (d.subcats) {
+    d.subcats.forEach((s) => {
+      const hex = '#' + new THREE.Color(s.cat.color).getHexString()
+      html += '<div class="row"><span class="dot" style="background:' + hex + '"></span>' + s.cat.name + ' · ' + Math.round(s.weight * 100) + '%</div>'
+    })
+  } else {
+    html += '<div class="row"><span class="dot" style="background:#' + c.color.getHexString() + '"></span>비중 · ' + Math.round(d.weight * 100) + '%</div>'
+  }
   html += '<div class="row">시청 수 · ' + d.count + '회</div>'
   html += '<div class="row">채널 다양성 · ' + d.diversity + '개</div>'
   html += '<div class="row">최근 활성도 · ' + (d.recency > 0.6 ? '높음' : d.recency > 0.3 ? '보통' : '낮음') + '</div>'
