@@ -213,8 +213,8 @@ function addCoralFromData(data) {
   const maxDim = Math.max(size.x, size.y, size.z) || 1
   const baseNorm = 1.2 / maxDim
 
-  const yStretch = 1 + data.weight * 1.5
-  const xzGirth = 0.7 + Math.min(data.diversity / 15, 1) * 0.6
+  const yStretch = 1.6 + data.weight * 0.8
+  const xzGirth = 0.6 + Math.min(data.diversity / 15, 1) * 0.35
 
   const color = new THREE.Color(data.cat.color)
   const mats = []
