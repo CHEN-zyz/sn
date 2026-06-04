@@ -92,13 +92,12 @@ const loader = new GLTFLoader()
 MODEL_PATHS.forEach((path, i) => {
   loader.load(path, (gltf) => {
     coralTemplates[i] = gltf.scene
-    if (i === 0) coralTemplate = gltf.scene
+    if (!coralTemplate) coralTemplate = gltf.scene
     modelsLoaded++
-    if (modelsLoaded === MODEL_PATHS.length) { addBtn.style.display = ''; uploadBtn.style.display = '' }
+    if (!addBtn.style.display || addBtn.style.display === 'none') { addBtn.style.display = ''; uploadBtn.style.display = '' }
   }, undefined, (err) => {
     console.warn('load failed: ' + path, err)
     modelsLoaded++
-    if (modelsLoaded === MODEL_PATHS.length) { addBtn.style.display = ''; uploadBtn.style.display = '' }
   })
 })
 
@@ -196,9 +195,11 @@ function displaceVertices(inner, amplitude) {
 }
 
 function pickTemplate(data) {
+  const available = coralTemplates.filter(Boolean)
+  if (available.length === 0) return coralTemplate
   const catIdx = CATEGORIES.indexOf(data.cat)
-  const modelIdx = catIdx >= 0 ? catIdx % coralTemplates.length : corals.length % coralTemplates.length
-  return coralTemplates[modelIdx] || coralTemplate
+  const modelIdx = catIdx >= 0 ? catIdx % available.length : corals.length % available.length
+  return available[modelIdx]
 }
 
 function addCoralFromData(data) {
