@@ -35,6 +35,7 @@ const _v = new THREE.Vector3()
 const noise3D = createNoise3D()
 
 const corals = []
+const coralTemplates = []
 let coralTemplate = null
 let focused = null
 let camTween = null
@@ -85,12 +86,21 @@ controls.target.set(0, 0, 0)
 const reef = new THREE.Group()
 scene.add(reef)
 
-new GLTFLoader().load(
-  '/models/coral.glb',
-  (gltf) => { coralTemplate = gltf.scene; addBtn.style.display = ''; uploadBtn.style.display = '' },
-  undefined,
-  (err) => console.warn('coral.glb load failed', err),
-)
+const MODEL_PATHS = ['/models/coral.glb', '/models/coral2.glb', '/models/coral3.glb', '/models/coral4.glb', '/models/coral5.glb', '/models/coral6.glb', '/models/coral7.glb']
+let modelsLoaded = 0
+const loader = new GLTFLoader()
+MODEL_PATHS.forEach((path, i) => {
+  loader.load(path, (gltf) => {
+    coralTemplates[i] = gltf.scene
+    if (i === 0) coralTemplate = gltf.scene
+    modelsLoaded++
+    if (modelsLoaded === MODEL_PATHS.length) { addBtn.style.display = ''; uploadBtn.style.display = '' }
+  }, undefined, (err) => {
+    console.warn('load failed: ' + path, err)
+    modelsLoaded++
+    if (modelsLoaded === MODEL_PATHS.length) { addBtn.style.display = ''; uploadBtn.style.display = '' }
+  })
+})
 
 function classifyTitle(title) {
   const lower = title.toLowerCase()
@@ -184,10 +194,17 @@ function displaceVertices(inner, amplitude) {
   })
 }
 
+function pickTemplate(data) {
+  const catIdx = CATEGORIES.indexOf(data.cat)
+  const modelIdx = catIdx >= 0 ? catIdx % coralTemplates.length : corals.length % coralTemplates.length
+  return coralTemplates[modelIdx] || coralTemplate
+}
+
 function addCoralFromData(data) {
   if (!coralTemplate) return
   const group = new THREE.Group()
-  const inner = coralTemplate.clone(true)
+  const template = pickTemplate(data)
+  const inner = template.clone(true)
   group.add(inner)
 
   const box = new THREE.Box3().setFromObject(group)
