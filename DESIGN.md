@@ -55,12 +55,25 @@ The reef grows in real-time, forming a unique "digital identity portrait" per us
 
 ## Planned Features (Achievable)
 
-### Data Pipeline
+### Data Pipeline (3-layer classification)
 
-- **Input page**: user pastes YouTube channel URL (or selects connected platform)
-- **YouTube Data API v3** (free tier): fetch subscribed channels → map channel categories to topic clusters → compute weight by subscription count / watch time
-- Output: `[{topic, emotion, weight}, ...]` → feeds directly into current `CLUSTERS` array
-- Emotion mapping: inferred from content category heuristics (e.g., Gaming → Thrill, Music → Excitement) — not ML, just a lookup table; sufficient for demo
+**Layer 1 — YouTube API + lookup table (covers ~80%, zero AI cost)**
+- User pastes YouTube channel URL → backend calls YouTube Data API v3 (free tier)
+- Fetches subscriptions / watch history; each video/channel already carries a YouTube `categoryId` (Gaming=20, Music=10, Education=27…)
+- A static lookup table maps YouTube categoryId → Coralithm topic cluster
+- Weight is computed from subscription count / watch time per cluster
+
+**Layer 2 — Keyword / rule fallback (covers ~10%)**
+- Videos categorized as generic "Entertainment" or "People & Blogs" go through keyword matching on title + description
+- Rules: e.g., title contains "recipe" / "cooking" → Lifestyle; "tutorial" / "how to code" → Tech
+- Deterministic, fast, no API cost
+
+**Layer 3 — LLM smart analysis (covers remaining ~10% + emotion)**
+- Ambiguous content that passes through Layer 1 & 2 unresolved → send title + description batch to LLM (Claude / GPT) for topic classification
+- **Emotion inference** (LLM's primary value): analyze a user's content consumption pattern to determine emotional tendency per topic (e.g., their Gaming content skews "Thrill" vs "Healing") — this is something keywords cannot do
+- Batched to minimize API calls (one call per user, not per video)
+
+**Output**: `[{topic, emotion, weight}, ...]` → feeds directly into the frontend `CLUSTERS` array
 
 ### Visual Upgrades
 

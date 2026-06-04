@@ -142,7 +142,14 @@ new GLTFLoader().load(
       group.scale.setScalar(0.001)
       div.style.opacity = '0'
 
-      const obj = { group, data, mats, color, baseScale: norm, phase: i * 1.27, labelEl: div, index: i }
+      inner.traverse((o) => {
+        if (o.isMesh && o.material) {
+          o.material.transparent = true
+          o.material.opacity = 1
+        }
+      })
+
+      const obj = { group, data, mats, color, baseScale: norm, phase: i * 1.27, labelEl: div, index: i, fade: 1, fadeTarget: 1 }
       group.userData.clusterRef = obj
       reef.add(group)
       clusterObjs.push(obj)
@@ -379,11 +386,13 @@ function focusCluster(c) {
   const dist = 1.8 + c.baseScale * 4
   startCamTween(cpos.clone().add(dir.multiplyScalar(dist)), cpos)
   showDetail(c)
+  for (const o of clusterObjs) o.fadeTarget = (o === c) ? 1 : 0.12
 }
 function resetView() {
   focused = null
   startCamTween(overviewPos, overviewTarget)
   hideDetail()
+  for (const o of clusterObjs) o.fadeTarget = 1
 }
 
 renderer.domElement.addEventListener('pointerdown', (e) => {
@@ -433,12 +442,18 @@ renderer.setAnimationLoop((time) => {
       else if (elapsed < GROW_DUR) { growK = easeOutBack(elapsed / GROW_DUR); allGrown = false }
     }
 
+    c.fade += (c.fadeTarget - c.fade) * 0.08
+
     const p = 0.5 + 0.5 * Math.sin(t * 1.0 + c.phase)
-    for (const m of c.mats) m.emissiveIntensity = (0.12 + 0.2 * p) * growK
-    c.group.scale.setScalar(c.baseScale * growK * (1 + 0.02 * Math.sin(t * 0.7 + c.phase)))
+    for (const m of c.mats) {
+      m.emissiveIntensity = (0.12 + 0.2 * p) * growK * c.fade
+      m.opacity = clamp(c.fade, 0.08, 1)
+    }
+    const scaleFade = 0.7 + 0.3 * c.fade
+    c.group.scale.setScalar(c.baseScale * growK * scaleFade * (1 + 0.02 * Math.sin(t * 0.7 + c.phase)))
     const d = camera.position.distanceTo(c.group.getWorldPosition(_v))
-    const op = clamp(1.4 - d / 14, 0.1, 1) * growK
-    c.labelEl.style.opacity = String(focused && focused !== c ? op * 0.25 : op)
+    const op = clamp(1.4 - d / 14, 0.1, 1) * growK * c.fade
+    c.labelEl.style.opacity = String(op)
   }
   if (allGrown && !growDone) growDone = true
 
