@@ -235,6 +235,7 @@ function addCoralFromData(data) {
   inner.position.sub(center)
 
   const pos = findPlacement()
+  pos.y += (data.weight - 0.3) * 3
   group.position.copy(pos)
   group.rotation.y = Math.random() * Math.PI * 2
   group.rotation.x = (Math.random() - 0.5) * 0.2
@@ -270,13 +271,16 @@ function addCoralFromData(data) {
 }
 
 function addCoralManual(cats) {
+  const catIndices = cats.map((c) => CATEGORIES.indexOf(c.cat))
+  const primaryIdx = catIndices[0] >= 0 ? catIndices[0] : 0
+  const spread = new Set(catIndices).size
   const data = {
     cat: cats[0].cat,
-    weight: 0.5,
-    count: 10,
-    diversity: 3 + Math.floor(Math.random() * 8),
-    recency: 0.8,
-    trend: 0.1,
+    weight: 0.3 + (WEIGHTS[0]) * (0.5 + primaryIdx / CATEGORIES.length * 0.5),
+    count: 5 + primaryIdx * 3 + spread * 4,
+    diversity: spread + Math.floor(primaryIdx / 3) + 2,
+    recency: 0.4 + WEIGHTS[0] * 0.6,
+    trend: (primaryIdx % 3 - 1) * 0.3,
     subcats: cats.map((c, i) => ({ cat: c.cat, weight: WEIGHTS[i] })),
   }
   addCoralFromData(data)
