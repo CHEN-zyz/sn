@@ -20,6 +20,162 @@ canvas {
   display: block;
 }
 
+#site-title {
+  position: fixed;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 10;
+}
+#site-title small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: rgba(180, 210, 235, 0.5);
+  margin-bottom: 4px;
+}
+#site-title span {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(100, 180, 255, 0.3);
+}
+
+#add-btn {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 28px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 20, 35, 0.6);
+  backdrop-filter: blur(8px);
+  color: #c0dff0;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  z-index: 10;
+}
+#add-btn:hover {
+  background: rgba(20, 40, 70, 0.7);
+  border-color: rgba(100, 180, 255, 0.4);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.modal-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.modal-content {
+  width: 520px;
+  max-width: 90vw;
+  padding: 32px;
+  border-radius: 18px;
+  background: rgba(12, 18, 28, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  text-align: center;
+}
+.modal-content h2 {
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.modal-content p {
+  font-size: 12px;
+  color: rgba(180, 200, 220, 0.7);
+  margin-bottom: 24px;
+}
+.cat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+.cat-tag {
+  position: relative;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #c0d0e0;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  user-select: none;
+}
+.cat-tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.cat-tag.selected {
+  border-color: rgba(120, 200, 255, 0.6);
+  background: rgba(60, 130, 220, 0.2);
+  color: #fff;
+}
+.cat-tag .order {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4ac8ff;
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#generate-btn {
+  padding: 10px 32px;
+  border-radius: 24px;
+  border: none;
+  background: linear-gradient(135deg, #3a8fd9, #6c5ce7);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+#generate-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 20px;
+  cursor: pointer;
+}
+
 .label {
   padding: 4px 11px;
   border-radius: 9px;
@@ -54,6 +210,7 @@ canvas {
 #detail-panel.show {
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
 }
 #detail-panel h2 {
   font-size: 21px;
@@ -75,18 +232,21 @@ canvas {
   margin-right: 8px;
   vertical-align: middle;
 }
-
-#hint {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+#delete-btn {
+  margin-top: 14px;
+  padding: 6px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  background: rgba(255, 50, 50, 0.1);
+  color: #ff8080;
+  font-family: inherit;
   font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: rgba(180, 210, 235, 0.45);
-  pointer-events: none;
-  user-select: none;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#delete-btn:hover {
+  background: rgba(255, 50, 50, 0.25);
 }
 
 #vignette {
@@ -94,4 +254,5 @@ canvas {
   inset: 0;
   pointer-events: none;
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.55) 100%);
+  z-index: 1;
 }
