@@ -111,7 +111,7 @@ MODEL_PATHS.forEach((path, i) => {
     coralTemplates[i] = gltf.scene
     if (!coralTemplate) coralTemplate = gltf.scene
     modelsLoaded++
-    if (!addBtn.style.display || addBtn.style.display === 'none') { addBtn.style.display = ''; uploadBtn.style.display = '' }
+    if (!addBtn.style.display || addBtn.style.display === 'none') { addBtn.style.display = ''; uploadBtn.style.display = ''; startQuizBtn.style.display = '' }
   }, undefined, (err) => {
     console.warn('load failed: ' + path, err)
     modelsLoaded++
@@ -353,7 +353,7 @@ function updateOverview() {
   overviewPos.set(center.x, center.y + sphere.radius * 0.4, center.z + Math.max(sphere.radius * 2.2, 5))
 }
 
-const FLOW_MAX = 3000, FLOW_RADIUS = 4, FLOW_SPEED = 0.3
+const FLOW_MAX = 3000, FLOW_RADIUS = 12, FLOW_SPEED = 0.3
 const flowPos = new Float32Array(FLOW_MAX * 3), flowCol = new Float32Array(FLOW_MAX * 3), flowSeed = new Float32Array(FLOW_MAX)
 for (let i = 0; i < FLOW_MAX; i++) {
   const r = FLOW_RADIUS * Math.cbrt(Math.random()), th = Math.acos(2 * Math.random() - 1), ph = Math.random() * Math.PI * 2
@@ -375,7 +375,7 @@ function updateFlow(dt, t) {
   flowGeo.attributes.position.needsUpdate = true
 }
 
-const SNOW = 800, snowBox = { x: 8, yTop: 7, yBot: -5, z: 8 }
+const SNOW = 800, snowBox = { x: 16, yTop: 10, yBot: -8, z: 16 }
 const snowPos = new Float32Array(SNOW * 3)
 for (let i = 0; i < SNOW; i++) { snowPos[i * 3] = (Math.random() * 2 - 1) * snowBox.x; snowPos[i * 3 + 1] = snowBox.yBot + Math.random() * (snowBox.yTop - snowBox.yBot); snowPos[i * 3 + 2] = (Math.random() * 2 - 1) * snowBox.z }
 const snowGeo = new THREE.BufferGeometry()
@@ -614,6 +614,7 @@ function finishQuiz() {
 const startQuizBtn = document.createElement('button')
 startQuizBtn.id = 'start-quiz-btn'
 startQuizBtn.textContent = '🧭 시작 질문'
+startQuizBtn.style.display = 'none'
 startQuizBtn.addEventListener('click', showQuiz)
 btnRow.appendChild(startQuizBtn)
 
