@@ -35,15 +35,92 @@ const EMOTIONS = {
   '음악': '여운형', '디자인·예술': '감성형', '여행': '설렘형', '영감·인사이트': '성장형',
   '학습': '탐구형', '스타일': '표현형', '기타': '중립형',
 }
-const QUESTIONS = [
-  { q: '평소 어떤 콘텐츠를 가장 자주 보시나요?', opts: ['뉴스·시사', '요리', '게임', '음악', '학습', '스타일'] },
-  { q: '영상을 볼 때 어떤 기분을 느끼고 싶나요?', opts: ['힐링하고 싶다', '자극받고 싶다', '새로운 걸 배우고 싶다', '영감을 얻고 싶다'] },
-  { q: '관심 있는 분야를 하나 더 골라주세요', opts: ['경제·투자', '스포츠', '소프트웨어·AI', '디자인·예술', '여행', '환경·기후'] },
+const Q_POOL = [
+  { w: 3, q: '친구들과 대화할 때 가장 흥미롭게 듣는 주제는?', opts: [
+    { text: '요즘 핫한 뉴스나 사회 이슈', cat: '뉴스·시사' },
+    { text: '맛집이나 새로운 레시피', cat: '요리' },
+    { text: '재테크나 투자 이야기', cat: '경제·투자' },
+    { text: '최근 본 영상이나 음악 추천', cat: '음악' },
+  ]},
+  { w: 3, q: '내 방에서 가장 아끼는 물건은?', opts: [
+    { text: '악기 / 스피커', cat: '음악' },
+    { text: '게임기 / PC', cat: '게임' },
+    { text: '요리 도구 / 커피 용품', cat: '요리' },
+    { text: '운동 기구 / 공', cat: '스포츠' },
+  ]},
+  { w: 1.5, q: '영상을 보며 가장 느끼고 싶은 감정은?', opts: [
+    { text: '편안하고 힐링되는 느낌', cat: '요리' },
+    { text: '두근두근 자극적인 느낌', cat: '게임' },
+    { text: '뭔가 배운 느낌', cat: '학습' },
+    { text: '감동받거나 영감을 얻는 느낌', cat: '영감·인사이트' },
+  ]},
+  { w: 1.5, q: '평소 내 취향을 한 단어로 표현한다면?', opts: [
+    { text: '탐험가', cat: '여행' },
+    { text: '크리에이터', cat: '디자인·예술' },
+    { text: '분석가', cat: '소프트웨어·AI' },
+    { text: '힐러', cat: '요리' },
+  ]},
+  { w: 3, q: '돈이 생긴다면 주로 어디에 쓰나요?', opts: [
+    { text: '여행', cat: '여행' },
+    { text: '전자기기 / 가젯', cat: '소프트웨어·AI' },
+    { text: '옷이나 뷰티', cat: '스타일' },
+    { text: '맛있는 음식 / 맛집', cat: '요리' },
+  ]},
+  { w: 1.5, q: '콘텐츠를 볼 때 가장 얻고 싶은 것은?', opts: [
+    { text: '실용적인 정보', cat: '학습' },
+    { text: '새로운 시각이나 영감', cat: '영감·인사이트' },
+    { text: '스트레스 해소', cat: '게임' },
+    { text: '트렌드 파악', cat: '광고·마케팅' },
+  ]},
+  { w: 3, q: '유튜브 자동재생에서 멈추게 되는 영상은?', opts: [
+    { text: '예쁜 풍경이나 여행 영상', cat: '여행' },
+    { text: '먹방이나 요리 과정', cat: '요리' },
+    { text: '게임 플레이나 하이라이트', cat: '게임' },
+    { text: '신기한 기술이나 과학 영상', cat: '소프트웨어·AI' },
+  ]},
+  { w: 2, q: '자유시간이 생기면 뭘 하고 싶으세요?', opts: [
+    { text: '요리하거나 카페 가기', cat: '요리' },
+    { text: '게임하기', cat: '게임' },
+    { text: '운동하거나 산책하기', cat: '스포츠' },
+    { text: '뭔가 새로 배우기', cat: '학습' },
+  ]},
+  { w: 2, q: '어떤 영상을 보다가 시간 가는 줄 모르게 되셨나요?', opts: [
+    { text: '브이로그 / 일상 영상', cat: '스타일' },
+    { text: '강의나 다큐멘터리', cat: '학습' },
+    { text: '음악 / 커버 영상', cat: '음악' },
+    { text: '스포츠 하이라이트', cat: '스포츠' },
+  ]},
+  { w: 1.5, q: '지금 가장 필요한 건?', opts: [
+    { text: '휴식', cat: '환경·기후' },
+    { text: '자극', cat: '스포츠' },
+    { text: '지식', cat: '소프트웨어·AI' },
+    { text: '영감', cat: '디자인·예술' },
+  ]},
+  { w: 1.5, q: '한 단어로 본인을 표현한다면?', opts: [
+    { text: '모험가', cat: '여행' },
+    { text: '몽상가', cat: '영감·인사이트' },
+    { text: '현실주의자', cat: '뉴스·시사' },
+    { text: '덕후', cat: '게임' },
+  ]},
+  { w: 1.5, q: '가장 즐겨하는 SNS는?', opts: [
+    { text: '인스타그램', cat: '스타일' },
+    { text: '유튜브', cat: '학습' },
+    { text: '틱톡', cat: '음악' },
+    { text: '트위터/X', cat: '뉴스·시사' },
+  ]},
+  { w: 2, q: '최근 가장 궁금했던 건?', opts: [
+    { text: '세계에서 무슨 일이 벌어지고 있는지', cat: '뉴스·시사' },
+    { text: '돈을 어떻게 불릴 수 있는지', cat: '경제·투자' },
+    { text: '새로운 기술이나 AI 트렌드', cat: '소프트웨어·AI' },
+    { text: '환경 문제나 기후 변화', cat: '환경·기후' },
+  ]},
+  { w: 1.5, q: '가장 즐겨하는 취미는?', opts: [
+    { text: '요리 / 베이킹', cat: '요리' },
+    { text: '그림 / 디자인', cat: '디자인·예술' },
+    { text: '독서 / 공부', cat: '학습' },
+    { text: '쇼핑 / 패션', cat: '스타일' },
+  ]},
 ]
-const Q_MAP = {
-  '힐링하고 싶다': '요리', '자극받고 싶다': '게임',
-  '새로운 걸 배우고 싶다': '학습', '영감을 얻고 싶다': '영감·인사이트',
-}
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
 const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
@@ -576,43 +653,67 @@ quizContent.className = 'modal-content'
 quizContent.style.position = 'relative'
 quizOverlay.appendChild(quizContent)
 document.body.appendChild(quizOverlay)
-let quizStep = 0, quizAnswers = []
+let quizStep = 0, quizPicked = [], quizScores = []
+
+function pickQuizQuestions() {
+  const pool = [...Q_POOL]
+  const picked = []
+  for (let i = 0; i < 3; i++) {
+    const idx = Math.floor(Math.random() * pool.length)
+    picked.push(pool.splice(idx, 1)[0])
+  }
+  return picked
+}
 
 function showQuiz() {
-  quizStep = 0; quizAnswers = []
+  quizStep = 0
+  quizPicked = pickQuizQuestions()
+  quizScores = []
   renderQuizStep()
   quizOverlay.classList.add('show')
 }
+
 function renderQuizStep() {
-  const q = QUESTIONS[quizStep]
+  const q = quizPicked[quizStep]
   let html = '<h2>' + q.q + '</h2><div class="quiz-opts">'
-  q.opts.forEach((o) => { html += '<button class="quiz-opt">' + o + '</button>' })
-  html += '</div><p class="quiz-progress">' + (quizStep + 1) + ' / ' + QUESTIONS.length + '</p>'
+  q.opts.forEach((o) => { html += '<button class="quiz-opt" data-cat="' + o.cat + '">' + o.text + '</button>' })
+  html += '</div><p class="quiz-progress">' + (quizStep + 1) + ' / 3</p>'
   quizContent.innerHTML = html
   quizContent.querySelectorAll('.quiz-opt').forEach((btn) => {
     btn.addEventListener('click', () => {
-      quizAnswers.push(btn.textContent)
+      quizScores.push({ catName: btn.dataset.cat, weight: quizPicked[quizStep].w })
       quizStep++
-      if (quizStep < QUESTIONS.length) renderQuizStep()
+      if (quizStep < 3) renderQuizStep()
       else finishQuiz()
     })
   })
 }
+
 function finishQuiz() {
   quizOverlay.classList.remove('show')
-  const mapped = quizAnswers.map((a) => Q_MAP[a] || a)
-  const cats = []
-  const seen = new Set()
-  for (const name of mapped) {
-    const cat = CATEGORIES.find((c) => c.name === name)
-    if (cat && !seen.has(cat.name)) { cats.push({ cat }); seen.add(cat.name) }
-    if (cats.length >= 3) break
+  const merged = new Map()
+  for (const s of quizScores) {
+    merged.set(s.catName, (merged.get(s.catName) || 0) + s.weight)
   }
-  while (cats.length < 3) {
-    const cat = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)]
-    if (!seen.has(cat.name)) { cats.push({ cat }); seen.add(cat.name) }
+  const totalPts = Array.from(merged.values()).reduce((a, b) => a + b, 0)
+  const sorted = Array.from(merged.entries()).sort((a, b) => b[1] - a[1])
+  const primaryName = sorted[0][0]
+  const primaryCat = CATEGORIES.find((c) => c.name === primaryName) || FALLBACK_CAT
+  const subcats = sorted.map(([name, pts]) => ({
+    cat: CATEGORIES.find((c) => c.name === name) || FALLBACK_CAT,
+    weight: pts / totalPts,
+  }))
+  const topWeight = sorted[0][1] / totalPts
+  const data = {
+    cat: primaryCat,
+    weight: topWeight,
+    count: Math.round(topWeight * 30),
+    diversity: sorted.length + 2,
+    recency: 0.5 + topWeight * 0.4,
+    trend: 0.1,
+    subcats,
   }
-  addCoralManual(cats)
+  addCoralFromData(data)
 }
 
 const startQuizBtn = document.createElement('button')
