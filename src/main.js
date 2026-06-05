@@ -344,7 +344,10 @@ function addCoralFromData(data) {
   const div = document.createElement('div')
   div.className = 'label'
   div.style.borderColor = 'rgba(' + Math.round(color.r * 255) + ',' + Math.round(color.g * 255) + ',' + Math.round(color.b * 255) + ',0.45)'
-  div.textContent = data.cat.name
+  const labelName = data.subcats && data.subcats.length > 1
+    ? data.subcats.map((s) => s.cat.name).join('·') + ' 산호'
+    : data.cat.name + ' 산호'
+  div.textContent = labelName
   div.style.opacity = '0'
   const label = new CSS2DObject(div)
   label.position.set(0, (size.y * baseNorm * yStretch) / 2 + 0.6, 0)
