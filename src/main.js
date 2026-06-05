@@ -28,6 +28,21 @@ const CATEGORIES = [
 ]
 const FALLBACK_CAT = { name: '기타', color: 0x888888, keys: [] }
 const WEIGHTS = [0.5, 0.3, 0.2]
+const EMOTIONS = {
+  '뉴스·시사': '연대형', '경제·투자': '안정형', '요리': '치유형', '게임': '자극형',
+  '스포츠': '열정형', '소프트웨어·AI': '몰입형', '환경·기후': '공감형', '광고·마케팅': '영감형',
+  '음악': '여운형', '디자인·예술': '감성형', '여행': '설렘형', '영감·인사이트': '성장형',
+  '학습': '탐구형', '스타일': '표현형', '기타': '중립형',
+}
+const QUESTIONS = [
+  { q: '평소 어떤 콘텐츠를 가장 자주 보시나요?', opts: ['뉴스·시사', '요리', '게임', '음악', '학습', '스타일'] },
+  { q: '영상을 볼 때 어떤 기분을 느끼고 싶나요?', opts: ['힐링하고 싶다', '자극받고 싶다', '새로운 걸 배우고 싶다', '영감을 얻고 싶다'] },
+  { q: '관심 있는 분야를 하나 더 골라주세요', opts: ['경제·투자', '스포츠', '소프트웨어·AI', '디자인·예술', '여행', '환경·기후'] },
+]
+const Q_MAP = {
+  '힐링하고 싶다': '요리', '자극받고 싶다': '게임',
+  '새로운 걸 배우고 싶다': '학습', '영감을 얻고 싶다': '영감·인사이트',
+}
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
 const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
@@ -39,6 +54,7 @@ const corals = []
 const coralTemplates = []
 let coralTemplate = null
 let focused = null
+let hovered = null
 let camTween = null
 let overviewPos = new THREE.Vector3(0, 2, 8)
 let overviewTarget = new THREE.Vector3(0, 0, 0)
@@ -526,6 +542,7 @@ function showDetail(c) {
   } else {
     html += '<div class="row"><span class="dot" style="background:#' + c.color.getHexString() + '"></span>비중 · ' + Math.round(d.weight * 100) + '%</div>'
   }
+  html += '<div class="row">정서 유형 · ' + (EMOTIONS[d.cat.name] || '중립형') + '</div>'
   html += '<div class="row">시청 수 · ' + d.count + '회</div>'
   html += '<div class="row">채널 다양성 · ' + d.diversity + '개</div>'
   html += '<div class="row">최근 활성도 · ' + (d.recency > 0.6 ? '높음' : d.recency > 0.3 ? '보통' : '낮음') + '</div>'
@@ -536,7 +553,72 @@ function showDetail(c) {
 }
 function hideDetail() { detail.classList.remove('show') }
 
+const screenshotBtn = document.createElement('button')
+screenshotBtn.id = 'screenshot-btn'
+screenshotBtn.textContent = '📷'
+screenshotBtn.addEventListener('click', () => {
+  composer.render()
+  const link = document.createElement('a')
+  link.download = 'coralithm.png'
+  link.href = renderer.domElement.toDataURL('image/png')
+  link.click()
+})
+document.body.appendChild(screenshotBtn)
+
+const quizOverlay = document.createElement('div')
+quizOverlay.className = 'modal-overlay'
+const quizContent = document.createElement('div')
+quizContent.className = 'modal-content'
+quizContent.style.position = 'relative'
+quizOverlay.appendChild(quizContent)
+document.body.appendChild(quizOverlay)
+let quizStep = 0, quizAnswers = []
+
+function showQuiz() {
+  quizStep = 0; quizAnswers = []
+  renderQuizStep()
+  quizOverlay.classList.add('show')
+}
+function renderQuizStep() {
+  const q = QUESTIONS[quizStep]
+  let html = '<h2>' + q.q + '</h2><div class="quiz-opts">'
+  q.opts.forEach((o) => { html += '<button class="quiz-opt">' + o + '</button>' })
+  html += '</div><p class="quiz-progress">' + (quizStep + 1) + ' / ' + QUESTIONS.length + '</p>'
+  quizContent.innerHTML = html
+  quizContent.querySelectorAll('.quiz-opt').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      quizAnswers.push(btn.textContent)
+      quizStep++
+      if (quizStep < QUESTIONS.length) renderQuizStep()
+      else finishQuiz()
+    })
+  })
+}
+function finishQuiz() {
+  quizOverlay.classList.remove('show')
+  const mapped = quizAnswers.map((a) => Q_MAP[a] || a)
+  const cats = []
+  const seen = new Set()
+  for (const name of mapped) {
+    const cat = CATEGORIES.find((c) => c.name === name)
+    if (cat && !seen.has(cat.name)) { cats.push({ cat }); seen.add(cat.name) }
+    if (cats.length >= 3) break
+  }
+  while (cats.length < 3) {
+    const cat = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)]
+    if (!seen.has(cat.name)) { cats.push({ cat }); seen.add(cat.name) }
+  }
+  addCoralManual(cats)
+}
+
+const startQuizBtn = document.createElement('button')
+startQuizBtn.id = 'start-quiz-btn'
+startQuizBtn.textContent = '🧭 시작 질문'
+startQuizBtn.addEventListener('click', showQuiz)
+btnRow.appendChild(startQuizBtn)
+
 const raycaster = new THREE.Raycaster()
+const hoverRaycaster = new THREE.Raycaster()
 let pointerStart = null
 
 function startCamTween(toPos, toTarget) {
@@ -582,6 +664,21 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   else if (focused) resetView()
 })
 
+renderer.domElement.addEventListener('pointermove', (e) => {
+  if (focused) return
+  const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
+  hoverRaycaster.setFromCamera(ndc, camera)
+  const groups = corals.filter((c) => !c.removing).map((c) => c.group)
+  const hits = hoverRaycaster.intersectObjects(groups, true)
+  const c = hits.length ? pickCluster(hits[0].object) : null
+  if (c !== hovered) {
+    if (hovered) hovered.labelEl.classList.remove('label-hover')
+    hovered = c
+    if (hovered) hovered.labelEl.classList.add('label-hover')
+    renderer.domElement.style.cursor = hovered ? 'pointer' : ''
+  }
+})
+
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight
   camera.aspect = w / h; camera.updateProjectionMatrix()
@@ -616,9 +713,10 @@ renderer.setAnimationLoop((time) => {
     else if (!c.grown) c.grown = true
 
     c.fade += (c.fadeTarget - c.fade) * 0.08
+    const isHovered = (c === hovered && !focused) ? 1 : 0
     const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
-      m.emissiveIntensity = (0.1 + 0.3 * p) * growK * c.fade * c.data.recency
+      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3)
       m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6), 0.08, 1)
     }
     const scaleFade = 0.7 + 0.3 * c.fade
