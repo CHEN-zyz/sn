@@ -90,10 +90,10 @@ function image(photo, index = 0) {
   return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=720&h=460&q=82`
 }
 
-const query = (url, value) => `${url}${encodeURIComponent(value)}`
-const youtube = (value) => query('https://www.youtube.com/results?search_query=', value)
-const naver = (value) => query('https://search.naver.com/search.naver?query=', value)
-const spotify = (value) => query('https://open.spotify.com/search/', value)
+const legacyLink = (value) => `https://example.com/unused-content?label=${encodeURIComponent(value)}`
+const youtube = legacyLink
+const naver = legacyLink
+const spotify = legacyLink
 
 const CONTENT_LIBRARY = {
   '뉴스·시사': [
@@ -182,6 +182,103 @@ const CONTENT_LIBRARY = {
   ],
 }
 
+const youtubeVideo = (id) => `https://www.youtube.com/watch?v=${id}`
+const youtubeThumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
+const steamImage = (appId) => `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`
+const pagePreview = (url) => `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`
+function imageForContent(item) {
+  const youtubeId = item.url.match(/[?&]v=([^&]+)/)?.[1]
+  if (youtubeId) return youtubeThumb(youtubeId)
+  return pagePreview(item.url)
+}
+
+const SPECIFIC_CONTENT_LIBRARY = {
+  '뉴스·시사': [
+    { source: 'BBC Korea', title: '기후 변화: 지구가 보내는 경고', url: 'https://www.bbc.com/korean', image: image('news', 0) },
+    { source: 'Google News', title: '한국 주요 뉴스 모아보기', url: 'https://news.google.com/topstories?hl=ko&gl=KR&ceid=KR:ko', image: image('news', 1) },
+    { source: 'Reuters', title: '세계 뉴스와 국제 이슈', url: 'https://www.reuters.com/world/', image: image('news', 2) },
+    { source: 'The Guardian', title: 'Long Read: 깊게 읽는 오늘의 이슈', url: 'https://www.theguardian.com/news/series/the-long-read', image: image('news', 3) },
+  ],
+  '경제·투자': [
+    { source: 'Naver Finance', title: '오늘의 국내 증시 지표', url: 'https://finance.naver.com/sise/', image: image('finance', 0) },
+    { source: 'TradingView', title: 'S&P 500 실시간 차트', url: 'https://kr.tradingview.com/symbols/SPX/', image: image('finance', 1) },
+    { source: 'KDI', title: '경제정보센터: 경제정책 자료', url: 'https://eiec.kdi.re.kr/main.do', image: image('finance', 2) },
+    { source: 'FRED', title: '미국 기준금리 데이터', url: 'https://fred.stlouisfed.org/series/FEDFUNDS', image: image('finance', 3) },
+  ],
+  '요리': [
+    { source: '만개의레시피', title: '김치볶음밥 레시피', url: 'https://www.10000recipe.com/recipe/list.html?q=%EA%B9%80%EC%B9%98%EB%B3%B6%EC%9D%8C%EB%B0%A5', image: image('cooking', 0) },
+    { source: 'Maangchi', title: 'Kimchi fried rice', url: 'https://www.maangchi.com/recipe/kimchi-bokkeumbap', image: image('cooking', 1) },
+    { source: 'BBC Good Food', title: 'Easy pancake recipe', url: 'https://www.bbcgoodfood.com/recipes/easy-pancakes', image: image('cooking', 2) },
+    { source: 'Allrecipes', title: 'Banana bread recipe', url: 'https://www.allrecipes.com/recipe/20144/banana-banana-bread/', image: image('cooking', 3) },
+  ],
+  '게임': [
+    { source: 'Steam', title: 'Hades', url: 'https://store.steampowered.com/app/1145360/Hades/', image: steamImage('1145360') },
+    { source: 'Steam', title: 'Stardew Valley', url: 'https://store.steampowered.com/app/413150/Stardew_Valley/', image: steamImage('413150') },
+    { source: 'Steam', title: 'Stray', url: 'https://store.steampowered.com/app/1332010/Stray/', image: steamImage('1332010') },
+    { source: 'Steam', title: 'Dave the Diver', url: 'https://store.steampowered.com/app/1868140/DAVE_THE_DIVER/', image: steamImage('1868140') },
+  ],
+  '스포츠': [
+    { source: 'Olympics', title: '올림픽 종목 소개', url: 'https://olympics.com/ko/sports/', image: image('sports', 0) },
+    { source: 'NBA', title: 'NBA 경기 하이라이트', url: 'https://www.nba.com/watch/featured', image: image('sports', 1) },
+    { source: 'FIFA', title: 'FIFA 월드컵 뉴스', url: 'https://www.fifa.com/fifaplus/ko/tournaments/mens/worldcup', image: image('sports', 2) },
+    { source: 'Strava', title: '러닝과 라이딩 기록하기', url: 'https://www.strava.com/sports/running', image: image('sports', 3) },
+  ],
+  '소프트웨어·AI': [
+    { source: 'GitHub', title: 'VS Code repository', url: 'https://github.com/microsoft/vscode', image: image('software', 0) },
+    { source: 'Hugging Face', title: 'Stable Diffusion XL', url: 'https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0', image: image('software', 1) },
+    { source: 'Kaggle', title: 'Titanic machine learning dataset', url: 'https://www.kaggle.com/c/titanic', image: image('software', 2) },
+    { source: 'MDN', title: 'JavaScript 첫걸음', url: 'https://developer.mozilla.org/ko/docs/Learn/JavaScript/First_steps', image: image('software', 3) },
+  ],
+  '환경·기후': [
+    { source: 'TED', title: 'Climate change talks', url: 'https://www.ted.com/topics/climate+change', image: image('climate', 0) },
+    { source: 'NASA', title: 'Global Climate Change', url: 'https://climate.nasa.gov/', image: image('climate', 1) },
+    { source: 'UNEP', title: 'Beat Plastic Pollution', url: 'https://www.unep.org/interactives/beat-plastic-pollution/', image: image('climate', 2) },
+    { source: 'Our World in Data', title: 'CO2 and greenhouse gas emissions', url: 'https://ourworldindata.org/co2-and-greenhouse-gas-emissions', image: image('climate', 3) },
+  ],
+  '광고·마케팅': [
+    { source: 'Think with Google', title: 'Consumer insights', url: 'https://www.thinkwithgoogle.com/intl/ko-kr/consumer-insights/', image: image('marketing', 0) },
+    { source: 'HubSpot', title: 'What is content marketing?', url: 'https://blog.hubspot.com/marketing/content-marketing', image: image('marketing', 1) },
+    { source: 'Mailchimp', title: 'What is a marketing campaign?', url: 'https://mailchimp.com/marketing-glossary/marketing-campaign/', image: image('marketing', 2) },
+    { source: 'Behance', title: 'Brand identity projects', url: 'https://www.behance.net/search/projects/brand%20identity', image: image('marketing', 3) },
+  ],
+  '음악': [
+    { source: 'YouTube', title: 'PSY - GANGNAM STYLE', url: youtubeVideo('9bZkp7q19f0'), image: youtubeThumb('9bZkp7q19f0') },
+    { source: 'YouTube', title: 'Rick Astley - Never Gonna Give You Up', url: youtubeVideo('dQw4w9WgXcQ'), image: youtubeThumb('dQw4w9WgXcQ') },
+    { source: 'YouTube', title: 'OneRepublic - Counting Stars', url: youtubeVideo('hT_nvWreIhg'), image: youtubeThumb('hT_nvWreIhg') },
+    { source: 'NPR Music', title: 'Tiny Desk Concerts', url: 'https://www.npr.org/series/tiny-desk-concerts/', image: image('music', 3) },
+  ],
+  '디자인·예술': [
+    { source: 'Google Arts', title: 'Van Gogh Museum', url: 'https://artsandculture.google.com/partner/van-gogh-museum', image: image('design', 0) },
+    { source: 'Awwwards', title: 'Website of the Day', url: 'https://www.awwwards.com/websites/sotd/', image: image('design', 1) },
+    { source: 'Behance', title: 'UI/UX design projects', url: 'https://www.behance.net/search/projects/ui%20ux%20design', image: image('design', 2) },
+    { source: 'MoMA', title: 'Collection: Design', url: 'https://www.moma.org/collection/terms/design', image: image('design', 3) },
+  ],
+  '여행': [
+    { source: 'Visit Korea', title: '서울 여행 정보', url: 'https://english.visitkorea.or.kr/svc/whereToGo/locIntrdn/rgnContentsView.do?vcontsId=140659', image: image('travel', 0) },
+    { source: 'Airbnb', title: '서울 숙소 둘러보기', url: 'https://www.airbnb.co.kr/s/Seoul--South-Korea/homes', image: image('travel', 1) },
+    { source: 'National Geographic', title: 'Best of the World', url: 'https://www.nationalgeographic.com/travel/article/best-of-the-world', image: image('travel', 2) },
+    { source: 'Lonely Planet', title: 'Japan travel guide', url: 'https://www.lonelyplanet.com/japan', image: image('travel', 3) },
+  ],
+  '영감·인사이트': [
+    { source: 'TED', title: 'Do schools kill creativity?', url: youtubeVideo('iG9CE55wbtY'), image: youtubeThumb('iG9CE55wbtY') },
+    { source: 'TED', title: 'The danger of a single story', url: youtubeVideo('D9Ihs241zeg'), image: youtubeThumb('D9Ihs241zeg') },
+    { source: 'YouTube', title: 'How to speak so that people want to listen', url: youtubeVideo('eIho2S0ZahI'), image: youtubeThumb('eIho2S0ZahI') },
+    { source: 'The Marginalian', title: 'Figuring', url: 'https://www.themarginalian.org/2019/02/12/figuring/', image: image('insight', 3) },
+  ],
+  '학습': [
+    { source: 'Khan Academy', title: 'Algebra basics', url: 'https://www.khanacademy.org/math/algebra-basics', image: image('learning', 0) },
+    { source: 'Coursera', title: 'Learning How to Learn', url: 'https://www.coursera.org/learn/learning-how-to-learn', image: image('learning', 1) },
+    { source: 'K-MOOC', title: 'K-MOOC 강좌 찾기', url: 'https://www.kmooc.kr/courses', image: image('learning', 2) },
+    { source: 'YouTube', title: 'The first 20 hours: how to learn anything', url: youtubeVideo('5MgBikgcWnY'), image: youtubeThumb('5MgBikgcWnY') },
+  ],
+  '스타일': [
+    { source: 'Vogue Korea', title: 'Fashion', url: 'https://www.vogue.co.kr/category/fashion/', image: image('style', 0) },
+    { source: 'Musinsa', title: 'Street snap', url: 'https://www.musinsa.com/snap/main', image: image('style', 1) },
+    { source: 'GQ Korea', title: 'Style', url: 'https://www.gqkorea.co.kr/category/style/', image: image('style', 2) },
+    { source: 'W Korea', title: 'Fashion', url: 'https://www.wkorea.com/category/fashion/', image: image('style', 3) },
+  ],
+}
+
 function distributeCards(weights, count = 6) {
   const total = weights.reduce((sum, value) => sum + value, 0) || 1
   const exact = weights.map((value) => (value / total) * count)
@@ -226,11 +323,11 @@ function feedFor(profile, labelFor) {
   const counts = distributeCards(profile.weights)
   const cards = []
   profile.cats.forEach((cat, catIndex) => {
-    const library = CONTENT_LIBRARY[cat.name] || []
+    const library = SPECIFIC_CONTENT_LIBRARY[cat.name] || []
     for (let i = 0; i < counts[catIndex]; i++) {
       if (!library.length) continue
       const item = library[(profile.feedOffset + i + catIndex) % library.length]
-      cards.push({ ...item, category: labelFor(cat), weight: profile.weights[catIndex] })
+      cards.push({ ...item, image: imageForContent(item), category: labelFor(cat), weight: profile.weights[catIndex] })
     }
   })
   return cards.sort((a, b) => b.weight - a.weight || a.title.localeCompare(b.title, 'ko')).slice(0, 6)
