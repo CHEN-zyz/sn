@@ -891,6 +891,7 @@ function pickCluster(o) { while (o) { if (o.userData && o.userData.clusterRef) r
 function focusCluster(c, notifyOfficial = true) {
   if (c.removing) return
   focused = c
+  controls.enableRotate = false // detail view is a locked inspect view — a tap can't swing the camera
   const cpos = c.group.getWorldPosition(new THREE.Vector3())
   const dir = camera.position.clone().sub(controls.target).normalize()
   startCamTween(cpos.clone().add(dir.multiplyScalar(3.5)), cpos)
@@ -898,7 +899,9 @@ function focusCluster(c, notifyOfficial = true) {
   if (notifyOfficial) officialUI?.onCoralFocused(c)
 }
 function resetView(notifyOfficial = true) {
-  focused = null; startCamTween(overviewPos, overviewTarget)
+  focused = null
+  controls.enableRotate = true // overview: free-orbit the reef again
+  startCamTween(overviewPos, overviewTarget)
   for (const o of corals) o.fadeTarget = 1
   if (notifyOfficial) officialUI?.onOverview()
 }
