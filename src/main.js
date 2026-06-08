@@ -896,6 +896,7 @@ function focusCluster(c, notifyOfficial = true) {
   if (hovered) { hovered.labelEl.classList.remove('label-hover'); hovered = null }
   if (camDebug) console.log(`[cam] focusCluster→${c.data?.cat?.name} (from ${notifyOfficial ? 'canvas-tap' : 'app/official-UI'})`)
   const cpos = c.group.getWorldPosition(new THREE.Vector3())
+  controls.target.copy(cpos)
   const dir = camera.position.clone().sub(cpos).normalize()
   startCamTween(cpos.clone().add(dir.multiplyScalar(3.5)), cpos)
   for (const o of corals) o.fadeTarget = (o === c) ? 1 : 0.12
