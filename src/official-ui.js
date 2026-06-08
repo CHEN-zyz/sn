@@ -403,7 +403,7 @@ export function createOfficialUI(api) {
         </aside>
         <div class="coral-actions">
           <button class="glass-action add-coral" type="button">+ 산호 추가</button>
-          <button class="primary-action open-feed" type="button">+ 피드 보기</button>
+          <button class="primary-action open-feed" type="button">피드 보기</button>
         </div>
       </section>
     </main>
@@ -418,7 +418,7 @@ export function createOfficialUI(api) {
         <button class="feed-close" type="button" aria-label="피드 닫기">×</button>
       </div>
       <div class="feed-grid"></div>
-      <button class="glass-action feed-close-bottom" type="button">+ 피드 닫기</button>
+      <button class="glass-action feed-close-bottom" type="button">피드 닫기</button>
     </aside>
 
     <div class="generation-overlay" aria-live="polite">
@@ -454,7 +454,9 @@ export function createOfficialUI(api) {
     document.body.classList.toggle('official-detail-view', next === 'coral')
     document.body.classList.toggle('official-overview-view', next === 'overview')
     document.body.classList.toggle('official-select-view', next === 'select')
-    headerContext.textContent = ''
+    headerContext.textContent = next === 'coral' && activeCoral
+      ? coralName(profileFromCoral(activeCoral), labelFor)
+      : ''
     if (next !== 'coral') closeFeed()
     if (next === 'overview') renderOverview()
   }

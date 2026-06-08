@@ -85,6 +85,15 @@ body.official-app:not(.official-overview-view) .label {
 }
 
 .header-context {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
+}
+
+.header-context:empty {
   display: none;
 }
 
@@ -731,7 +740,8 @@ body.official-app:not(.official-overview-view) .label {
   }
 
   .header-context {
-    display: none;
+    margin-top: 4px;
+    font-size: 10px;
   }
 
   .intro-copy {
