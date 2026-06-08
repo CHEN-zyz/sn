@@ -9,7 +9,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { createNoise3D } from 'simplex-noise'
+import { createOfficialUI } from './official-ui.js'
 import './style.css'
+import './official-ui.css'
 
 const CATEGORIES = [
   { name: '뉴스·시사', color: 0x4a90d9, keys: ['news','뉴스','시사','정치','politics','current'] },
@@ -28,6 +30,25 @@ const CATEGORIES = [
   { name: '스타일', color: 0xff85a2, keys: ['fashion','style','패션','beauty','makeup','스타일','haul','outfit','skincare'] },
 ]
 const FALLBACK_CAT = { name: '기타', color: 0x888888, keys: [] }
+const OFFICIAL_CATEGORY_NAMES = {
+  '뉴스·시사': '뉴스·시사',
+  '경제·투자': '경제·시장·투자',
+  '요리': '요리',
+  '게임': '게임',
+  '스포츠': '스포츠',
+  '소프트웨어·AI': '소프트웨어·데이터·AI',
+  '환경·기후': '환경·기후',
+  '광고·마케팅': '광고·마케팅',
+  '음악': '음악',
+  '디자인·예술': '디자인·예술',
+  '여행': '여행',
+  '영감·인사이트': '영감·인사이트',
+  '학습': '학습',
+  '스타일': '스타일',
+}
+function officialCategoryName(name) {
+  return OFFICIAL_CATEGORY_NAMES[name] || name
+}
 const WEIGHTS = [0.5, 0.3, 0.2]
 const urlParams = new URLSearchParams(window.location.search)
 const capturePreset = urlParams.get('capture')
@@ -36,10 +57,12 @@ const pvControls = pvMode && (urlParams.get('pvControls') === '1' || urlParams.g
 const pvDirector = pvControls && (urlParams.get('director') === '1' || urlParams.get('debug') === '1')
 const pvSeek = Number(urlParams.get('pvTime') || NaN)
 const captureMode = ['void', 'signal', 'forming', 'solo', 'trio', 'reef'].includes(capturePreset)
+const officialMode = !captureMode && !pvMode
 if (captureMode || pvMode) document.body.classList.add('capture-mode')
 if (pvMode) document.body.classList.add('pv-mode')
 if (pvControls) document.body.classList.add('pv-controls-mode')
 if (pvDirector) document.body.classList.add('pv-director-open')
+if (officialMode) document.body.classList.add('official-app')
 const EMOTIONS = {
   '뉴스·시사': '연대형', '경제·투자': '안정형', '요리': '치유형', '게임': '자극형',
   '스포츠': '열정형', '소프트웨어·AI': '몰입형', '환경·기후': '공감형', '광고·마케팅': '영감형',
@@ -142,6 +165,8 @@ const noise3D = createNoise3D()
 const corals = []
 const coralTemplates = []
 let coralTemplate = null
+let officialUI = null
+let introPreviewCorals = []
 let focused = null
 let hovered = null
 let camTween = null
@@ -206,11 +231,13 @@ MODEL_PATHS.forEach((path, i) => {
     if (!addBtn.style.display || addBtn.style.display === 'none') { addBtn.style.display = ''; uploadBtn.style.display = ''; startQuizBtn.style.display = ''; pvWatchBtn.style.display = '' }
     maybeBuildCaptureScene()
     maybeBuildPVScene()
+    if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
   }, undefined, (err) => {
     console.warn('load failed: ' + path, err)
     modelsLoaded++
     maybeBuildCaptureScene()
     maybeBuildPVScene()
+    if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
   })
 })
 
@@ -361,7 +388,7 @@ function addCoralFromData(data) {
   div.className = 'label'
   div.style.borderColor = 'rgba(' + Math.round(color.r * 255) + ',' + Math.round(color.g * 255) + ',' + Math.round(color.b * 255) + ',0.45)'
   const labelName = data.subcats && data.subcats.length > 1
-    ? data.subcats.map((s) => s.cat.name).join('·') + ' 산호'
+    ? data.subcats.map((s) => officialCategoryName(s.cat.name)).join('·') + ' 산호'
     : data.cat.name + ' 산호'
   div.textContent = labelName
   div.style.opacity = '0'
@@ -660,7 +687,68 @@ function addCoralManual(cats) {
     trend: (primaryIdx % 3 - 1) * 0.3,
     subcats: cats.map((c, i) => ({ cat: c.cat, weight: WEIGHTS[i] })),
   }
-  addCoralFromData(data)
+  return addCoralFromData(data)
+}
+
+function updateCoralProfile(coral, weightedCats) {
+  if (!coral || !weightedCats.length) return
+  const total = weightedCats.reduce((sum, item) => sum + item.weight, 0) || 1
+  const normalized = weightedCats
+    .map((item) => ({ cat: item.cat, weight: item.weight / total }))
+    .sort((a, b) => b.weight - a.weight)
+  const primary = normalized[0]
+
+  coral.data.cat = primary.cat
+  coral.data.subcats = normalized
+  coral.data.weight = primary.weight
+  coral.data.diversity = normalized.length + 2
+  coral.data.recency = 0.55 + primary.weight * 0.4
+  coral.color.set(primary.cat.color)
+  coral.yStretch = 1 + primary.weight * 0.34
+  coral.xzGirth = 0.9 + (1 - primary.weight) * 0.18
+
+  coral.mats.forEach((material) => {
+    material.emissive.copy(coral.color)
+    material.roughness = 0.34 + primary.weight * 0.28
+  })
+  coral.labelEl.textContent = normalized.map((item) => officialCategoryName(item.cat.name)).join('·') + ' 산호'
+}
+
+function clearIntroPreview() {
+  introPreviewCorals.forEach((coral) => {
+    reef.remove(coral.group)
+    const index = corals.indexOf(coral)
+    if (index >= 0) corals.splice(index, 1)
+  })
+  introPreviewCorals = []
+  rebuildConnections()
+  updateOverview()
+}
+
+function seedIntroPreview() {
+  if (!officialMode || introPreviewCorals.length || modelsLoaded < MODEL_PATHS.length || !coralTemplate) return
+  const previewData = [
+    captureData(8, 4, [-2.8, -0.55, 0.4], 0.72, 8, 0.72, 0.15, 0.2),
+    captureData(5, 3, [-1.25, 0.65, -1.1], 0.88, 11, 0.84, 0.2, -0.35),
+    captureData(6, 1, [0.2, -0.45, 0.75], 0.62, 7, 0.68, 0.05, 0.4),
+    captureData(9, 5, [1.55, 0.55, -0.85], 0.78, 9, 0.76, 0.18, -0.25),
+    captureData(10, 0, [2.9, -0.6, 0.35], 0.58, 6, 0.64, -0.08, 0.45),
+  ]
+  introPreviewCorals = previewData.map((data) => {
+    data.isIntroPreview = true
+    const coral = addCoralFromData(data)
+    if (coral) {
+      coral.isIntroPreview = true
+      coral.hideLabel = true
+      coral.labelEl.style.display = 'none'
+    }
+    return coral
+  }).filter(Boolean)
+  overviewTarget.set(0, 0, 0)
+  overviewPos.set(0, 1.25, 7.8)
+  camera.position.copy(overviewPos)
+  controls.target.copy(overviewTarget)
+  controls.update()
 }
 
 function removeCoral(c) {
@@ -1191,7 +1279,7 @@ function updateCamTween() {
 }
 
 function pickCluster(o) { while (o) { if (o.userData && o.userData.clusterRef) return o.userData.clusterRef; o = o.parent } return null }
-function focusCluster(c) {
+function focusCluster(c, notifyOfficial = true) {
   if (c.removing) return
   focused = c
   const cpos = c.group.getWorldPosition(new THREE.Vector3())
@@ -1199,10 +1287,12 @@ function focusCluster(c) {
   startCamTween(cpos.clone().add(dir.multiplyScalar(3.5)), cpos)
   showDetail(c)
   for (const o of corals) o.fadeTarget = (o === c) ? 1 : 0.12
+  if (notifyOfficial) officialUI?.onCoralFocused(c)
 }
-function resetView() {
+function resetView(notifyOfficial = true) {
   focused = null; startCamTween(overviewPos, overviewTarget); hideDetail()
   for (const o of corals) o.fadeTarget = 1
+  if (notifyOfficial) officialUI?.onOverview()
 }
 
 renderer.domElement.addEventListener('pointerdown', (e) => { pointerStart = { x: e.clientX, y: e.clientY, t: performance.now() } })
@@ -1214,7 +1304,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (moved >= 6 || elapsed >= 350) return
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
-  const groups = corals.filter((c) => !c.removing).map((c) => c.group)
+  const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
   const hits = raycaster.intersectObjects(groups, true)
   const c = hits.length ? pickCluster(hits[0].object) : null
   if (c) focusCluster(c)
@@ -1225,7 +1315,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
   if (focused) return
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   hoverRaycaster.setFromCamera(ndc, camera)
-  const groups = corals.filter((c) => !c.removing).map((c) => c.group)
+  const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
   const hits = hoverRaycaster.intersectObjects(groups, true)
   const c = hits.length ? pickCluster(hits[0].object) : null
   if (c !== hovered) {
@@ -1245,6 +1335,25 @@ window.addEventListener('resize', onResize)
 
 const timer = new THREE.Timer()
 timer.connect(document)
+
+if (officialMode) {
+  officialUI = createOfficialUI({
+    categories: CATEGORIES.map((cat) => ({ cat, label: officialCategoryName(cat.name) })),
+    getCorals: () => corals.filter((coral) => !coral.removing && !coral.isIntroPreview),
+    createCoral: (selectedCats) => {
+      clearIntroPreview()
+      const coral = addCoralManual(selectedCats.map((cat) => ({ cat })))
+      if (coral) updateCoralProfile(coral, selectedCats.map((cat, index) => ({ cat, weight: WEIGHTS[index] })))
+      return coral
+    },
+    updateCoral: updateCoralProfile,
+    focusCoral: (coral) => focusCluster(coral, false),
+    showOverview: () => resetView(false),
+    seedIntro: seedIntroPreview,
+    modelsReady: () => modelsLoaded >= MODEL_PATHS.length && Boolean(coralTemplate),
+  })
+  if (modelsLoaded >= MODEL_PATHS.length) officialUI.onModelsReady()
+}
 
 renderer.setAnimationLoop((time) => {
   timer.update(time)
@@ -1287,7 +1396,7 @@ renderer.setAnimationLoop((time) => {
     if (!focused) c.group.rotation.y += c.spinSpeed * dt
 
     const d = camera.position.distanceTo(c.group.getWorldPosition(_v))
-    c.labelEl.style.opacity = String(clamp(1.4 - d / 14, 0.1, 1) * growK * c.fade)
+    c.labelEl.style.opacity = c.hideLabel ? '0' : String(clamp(1.4 - d / 14, 0.1, 1) * growK * c.fade)
   }
 
   if (lineMesh) {
