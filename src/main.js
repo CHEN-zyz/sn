@@ -870,6 +870,9 @@ let pointerStart = null
 
 function startCamTween(toPos, toTarget) {
   camTween = { fromPos: camera.position.clone(), toPos: toPos.clone(), fromTar: controls.target.clone(), toTar: toTarget.clone(), t0: timer.getElapsed(), dur: 1.0 }
+  // Hand the camera fully to the tween so OrbitControls' leftover drag/damping
+  // state can't fight it (which caused a snap when control was handed back).
+  controls.enabled = false
 }
 function updateCamTween() {
   if (!camTween) return
@@ -877,7 +880,11 @@ function updateCamTween() {
   const a = easeInOut(k)
   camera.position.lerpVectors(camTween.fromPos, camTween.toPos, a)
   controls.target.lerpVectors(camTween.fromTar, camTween.toTar, a)
-  if (k >= 1) camTween = null
+  if (k >= 1) {
+    camTween = null
+    controls.enabled = true
+    controls.update() // resync OrbitControls to the final pose — no leftover-inertia snap
+  }
 }
 
 function pickCluster(o) { while (o) { if (o.userData && o.userData.clusterRef) return o.userData.clusterRef; o = o.parent } return null }
