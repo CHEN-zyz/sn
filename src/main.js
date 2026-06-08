@@ -390,12 +390,7 @@ function addCoralFromData(data) {
   const labelName = data.subcats && data.subcats.length > 1
     ? data.subcats.map((s) => officialCategoryName(s.cat.name)).join('·') + ' 산호'
     : data.cat.name + ' 산호'
-  div.textContent = data.isIntroPreview ? '' : labelName
-  if (data.isIntroPreview) {
-    div.classList.add('intro-preview-label')
-    div.style.display = 'none'
-    div.style.visibility = 'hidden'
-  }
+  div.textContent = labelName
   div.style.opacity = '0'
   const label = new CSS2DObject(div)
   label.position.set(0, (size.y * baseNorm * yStretch) / 2 + 0.6, 0)
@@ -745,18 +740,10 @@ function seedIntroPreview() {
     if (coral) {
       coral.isIntroPreview = true
       coral.hideLabel = true
-      coral.labelEl.textContent = ''
-      coral.labelEl.classList.add('intro-preview-label')
       coral.labelEl.style.display = 'none'
-      coral.labelEl.style.visibility = 'hidden'
     }
     return coral
   }).filter(Boolean)
-  if (lineMesh) {
-    reef.remove(lineMesh)
-    lineMesh.geometry.dispose()
-    lineMesh = null
-  }
   overviewTarget.set(0, 0, 0)
   overviewPos.set(0, 1.25, 7.8)
   camera.position.copy(overviewPos)
