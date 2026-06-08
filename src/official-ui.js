@@ -398,6 +398,13 @@ export function createOfficialUI(api) {
           <span class="eyebrow">ALGORITHM CORAL</span>
           <h1 class="coral-name"></h1>
           <p class="weight-instruction"></p>
+          <div class="tag-editor">
+            <div class="tag-editor-head">
+              <span>태그 변경</span>
+              <small>카테고리를 바꾸면 산호와 피드가 함께 바뀝니다.</small>
+            </div>
+            <div class="tag-slots"></div>
+          </div>
           <div class="weight-controls"></div>
           <p class="weight-note">비중을 움직이면 산호의 빛과 추천 피드가 함께 달라집니다.</p>
           <button class="delete-coral" type="button">산호 삭제</button>
@@ -419,7 +426,6 @@ export function createOfficialUI(api) {
         <button class="feed-close" type="button" aria-label="피드 닫기">×</button>
       </div>
       <div class="feed-grid"></div>
-      <button class="glass-action feed-close-bottom" type="button">피드 닫기</button>
     </aside>
 
     <div class="generation-overlay" aria-live="polite">
@@ -515,6 +521,7 @@ export function createOfficialUI(api) {
     root.querySelector('.coral-name').textContent = coralName(profile, labelFor)
     root.querySelector('.weight-instruction').textContent =
       `${profile.cats.map(labelFor).join(' · ')} 콘텐츠의 비중을 조절해 주세요.`
+    renderTagEditor(profile)
     const controls = root.querySelector('.weight-controls')
     controls.innerHTML = ''
     profile.cats.forEach((cat, index) => {
@@ -532,6 +539,37 @@ export function createOfficialUI(api) {
         applyProfile()
       })
       controls.appendChild(row)
+    })
+  }
+
+  function renderTagEditor(profile) {
+    const slots = root.querySelector('.tag-slots')
+    slots.innerHTML = ''
+    profile.cats.forEach((cat, index) => {
+      const row = document.createElement('label')
+      row.className = 'tag-slot'
+      row.innerHTML = `
+        <span>${index + 1}</span>
+        <select aria-label="태그 ${index + 1} 변경"></select>
+      `
+      const select = row.querySelector('select')
+      api.categories.forEach(({ cat: optionCat, label }) => {
+        const option = document.createElement('option')
+        option.value = optionCat.name
+        option.textContent = label
+        option.selected = optionCat.name === cat.name
+        option.disabled = profile.cats.some((selectedCat, selectedIndex) =>
+          selectedIndex !== index && selectedCat.name === optionCat.name
+        )
+        select.appendChild(option)
+      })
+      select.addEventListener('change', () => {
+        const nextCat = api.categories.find((item) => item.cat.name === select.value)?.cat
+        if (!nextCat) return
+        profile.cats[index] = nextCat
+        applyProfile()
+      })
+      slots.appendChild(row)
     })
   }
 
@@ -564,6 +602,7 @@ export function createOfficialUI(api) {
   function applyProfile() {
     const profile = profileFromCoral(activeCoral)
     api.updateCoral(activeCoral, profile.cats.map((cat, index) => ({ cat, weight: profile.weights[index] })))
+    headerContext.textContent = coralName(profile, labelFor)
     renderCoral()
     if (feedPanel.classList.contains('is-open')) renderFeed()
   }
@@ -642,7 +681,6 @@ export function createOfficialUI(api) {
     setView('overview')
   })
   root.querySelector('.feed-close').addEventListener('click', closeFeed)
-  root.querySelector('.feed-close-bottom').addEventListener('click', closeFeed)
   root.querySelector('.back-button').addEventListener('click', () => {
     api.showOverview()
     setView('overview')
