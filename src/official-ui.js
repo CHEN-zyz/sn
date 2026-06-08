@@ -249,7 +249,8 @@ export function createOfficialUI(api) {
   root.innerHTML = `
     <header class="product-header" aria-label="CORALITHM">
       <button class="brand-button" type="button" aria-label="산호 전체 보기">
-        <img src="/ui/top-title.png" alt="CORALITHM">
+        <span>Start your exploration with</span>
+        <strong>CORALITHM</strong>
       </button>
       <p class="header-context"></p>
     </header>
