@@ -902,8 +902,12 @@ function focusCluster(c, notifyOfficial = true) {
 function resetView(notifyOfficial = true) {
   focused = null
   updateOverview()
+  const dir = camera.position.clone().sub(controls.target).normalize()
+  const dist = overviewPos.distanceTo(overviewTarget)
+  const target = overviewTarget.clone()
+  const pos = target.clone().add(dir.multiplyScalar(dist))
   if (camDebug) console.log(`[cam] resetView→overview (from ${notifyOfficial ? 'canvas-tap' : 'app/official-UI'})`)
-  startCamTween(overviewPos, overviewTarget, 0.6, easeOut)
+  startCamTween(pos, target, 0.6, easeOut)
   for (const o of corals) o.fadeTarget = 1
   if (notifyOfficial) officialUI?.onOverview()
 }
