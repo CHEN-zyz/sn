@@ -2,93 +2,127 @@
 
 ## Concept
 
-YouTube watch history visualized as a coral reef.
-Users upload their Google Takeout data, the system classifies their viewing into topic categories and grows a coral for each one. Size, color, glow, and motion reflect how much, how recently, and how diversely the user watches that category.
+Coralithm turns a person's interests into a 3D reef that can keep growing.
+
+Users can either upload their YouTube watch history or answer a short set of questions. Both paths produce a mix of interest categories, which then shapes each coral's color, form, glow, and movement. Completing the quiz adds another coral instead of replacing the existing reef.
 
 ---
 
 ## Current Implementation
 
-### Data Input
+### Two Input Modes
 
-**Google Takeout upload**
-- User selects their `watch-history.json` (exported from Google Takeout)
-- Parsed entirely in the browser. Nothing is sent to any server.
+**YouTube data upload**
+
+- Reads `watch-history.json` exported from Google Takeout
+- Parses the file entirely in the browser; viewing history is not sent to a server
 - Extracts video titles, channel names, and timestamps
-- Classifies each video into 14 topic categories via keyword matching (Korean / English)
-- Per category: watch count, channel diversity, recency, trend
+- Uses Korean and English keyword matching to sort entries into 14 topics
+- Calculates watch count, channel count, recency, and trend for each topic
+- Generates corals for the 10 most-watched topics
+- Replaces the current reef when a new history file is uploaded
 
-**Manual selection (for demo)**
-- User picks 3 categories from a modal, corals are generated with simulated data
-- Weight by selection order: 1st = 50%, 2nd = 30%, 3rd = 20%
+**Random question mode**
 
-**Tutorial**
-- "?" button opens a step-by-step guide on how to export from Google Takeout
-- Links to takeout.google.com directly
+- Contains a pool of 14 questions and draws 3 without repetition for each run
+- Every question has 4 answers, each linked to an interest category
+- Concrete, behavior-based questions carry more weight than abstract preference questions
+- Repeated hits on the same category accumulate
+- The final score distribution becomes one mixed-interest coral
+- The quiz can be repeated to add more corals without clearing the reef
+- Names are assembled from the matched categories, such as "게임·음악 산호" ("Game·Music Coral")
 
-### Data → Visual Mapping
+A manual demo entry point is still available. It asks the user to choose 3 categories and assigns fixed weights of 50%, 30%, and 20% in selection order.
 
-Each coral is a clone of the same base model, but 7 data dimensions make them look different:
+### Categories
 
-| Data | Maps to | Why |
-|---|---|---|
-| Category | Color | Immediate visual grouping |
-| Watch count | Height (Y scale) | More = taller |
-| Channel diversity | Width (XZ scale) | Broader = wider |
-| Recency | Emissive glow | Recent = bright, old = dim |
-| Frequency trend | Spin speed | Rising interest = spins faster |
-| Activity | Breathing rate | Active = faster pulse |
-| Weight × noise | Vertex displacement (simplex noise) | Breaks the "copy-paste" silhouette |
+The current set contains 14 topics:
 
-Vertex displacement runs once when the coral is created. Heavier categories get more distortion.
+News & Current Affairs, Finance & Investment, Cooking, Gaming, Sports, Software & AI, Environment & Climate, Advertising & Marketing, Music, Design & Art, Travel, Inspiration & Insight, Learning, and Style.
 
-### Atmosphere
+YouTube entries that match no category fall back to "Other."
 
-- Black background, bloom, exponential fog, vignette
-- 3000 drifting particles, 800 falling marine snow, 3 light shafts
+### Data and Visuals
 
-### Interaction
+The project loads 7 coral models and assigns them by primary category in a repeating cycle. Since there are more categories than models, some categories share the same base shape.
 
-- Drag/scroll to orbit and zoom
-- Click a coral: camera flies in, detail panel shows stats, other corals fade out
-- Click empty space: camera returns, everything restores
-- Delete button in the detail panel removes the coral, connections rebuild
-- Labels float above each coral, fade with distance
-- New corals grow from zero (easeOutBack), auto-placed on a spiral grid to avoid overlap
+| Data | Visual treatment |
+|---|---|
+| Primary category | Coral color and base model |
+| Category share | Height, opacity, and vertex displacement |
+| Channel diversity | Width and material roughness |
+| Recency | Emissive glow and breathing speed |
+| Trend | Spin speed |
+| Multiple matched categories | Ratio list in the detail panel and a combined name |
 
-### Connection Lines
+Simplex noise is applied once when a coral is created to vary its silhouette. New corals grow from nearly zero with a spring-like animation and are placed automatically to avoid overlap.
 
-- Bezier curves between each coral and its 2 nearest neighbors
-- Fade in after growth finishes, rebuild on add/remove
+### Simulated Metrics in Question Mode
 
-### Tech
+Quiz answers can support an interest mix, but they cannot reveal actual watch count, channel diversity, or recent viewing activity.
 
-- Vite, vanilla JS, single file (`src/main.js`)
-- Three.js r184, CSS2DRenderer, UnrealBloomPass, simplex-noise
-- Model: `coral.glb` (Tripo, 17 MB, standard PBR)
-- Deployed on Vercel: **sn-rouge.vercel.app**, auto-deploys on push
+The current implementation generates placeholder values to drive the existing visual system:
+
+- Watch count is derived from the largest category share
+- Channel diversity is estimated from the number of matched categories
+- Recency is derived from the largest category share
+- Trend uses a fixed value
+
+The detail panel does not yet distinguish these estimates from statistics calculated from YouTube history. This can make both modes look equally factual. A production version should either hide those fields in question mode, label them as estimates, or replace them with measures that the questionnaire can reasonably support.
+
+### Scene and Interaction
+
+- Black underwater scene with bloom, exponential fog, and a vignette
+- 3,000 drifting particles, 800 marine-snow particles, and 3 light shafts
+- Drag to orbit and scroll to zoom
+- Hovering a coral emphasizes its label
+- Clicking a coral moves the camera closer, fades the others, and opens a detail panel
+- Clicking empty space returns to the overview
+- Individual corals can be deleted
+- Each coral connects to its 2 nearest neighbors; connections rebuild after additions or removals
+- The current view can be exported as a PNG
+- A "?" button explains how to export data from Google Takeout
 
 ---
 
-## Next Steps
+## Known Limitations
 
-### Better classification
+### YouTube classification is still broad
 
-Currently keyword-only. Can be improved in layers:
+Classification currently relies on title keywords. Ambiguous titles, missing keywords, and cross-topic videos can be assigned incorrectly, while "Other" may collect a large share of unrecognized entries.
 
-1. **YouTube API**: fetch `categoryId` per video using IDs from the Takeout URLs. Covers most videos. Needs a small backend for API keys.
-2. **Keyword fallback**: already done, catches titles the API misses.
-3. **LLM batch**: for ambiguous titles + emotion tagging per category. One API call per user.
+### The trend metric needs a new definition
 
-### More visual variety
+Trend exists in the data model and controls spin speed, but the current calculation does not meaningfully describe how an interest changes over time. It needs explicit time windows and a better comparison method.
 
-- Different coral models per category (needs additional glb files from 3D tools or AI generation)
-- Shape Keys for branch-growth animation (needs modeling work)
-- Per-coral particle halos
-- Layer-based selective bloom
+### The two modes represent different kinds of data
 
-### More interaction
+YouTube mode describes observed viewing behavior. Question mode describes self-reported and momentary preferences. They can share the same coral language, but the detail panel should not present both as the same kind of measurement.
 
-- Hover preview before clicking
-- Sub-category breakdown inside a coral
-- Screenshot export
+### Models are not unique to categories
+
+Fourteen categories currently share 7 models. Color does most of the category differentiation; there is not yet a distinct shape system for every topic.
+
+---
+
+## Next Directions
+
+### Clarify what the data means
+
+- Mark observed statistics and questionnaire estimates clearly
+- Give question mode measures it can support, such as interest strength or preference concentration
+- Develop coral names beyond direct category combinations
+- Redesign the trend calculation
+
+### Improve classification
+
+1. Extract video IDs from Takeout URLs and retrieve `categoryId` through the YouTube API
+2. Keep keyword matching as a fallback
+3. Use batch semantic classification for ambiguous titles
+
+### Expand visual variety
+
+- Add models so major categories have more recognizable silhouettes
+- Use Shape Keys or a rig for branch growth
+- Give individual corals their own particles and local glow
+- Add a clearer view of category composition and data provenance

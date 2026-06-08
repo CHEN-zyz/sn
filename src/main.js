@@ -29,6 +29,17 @@ const CATEGORIES = [
 ]
 const FALLBACK_CAT = { name: '기타', color: 0x888888, keys: [] }
 const WEIGHTS = [0.5, 0.3, 0.2]
+const urlParams = new URLSearchParams(window.location.search)
+const capturePreset = urlParams.get('capture')
+const pvMode = urlParams.get('pv') === '1'
+const pvControls = pvMode && (urlParams.get('pvControls') === '1' || urlParams.get('controls') === '1')
+const pvDirector = pvControls && (urlParams.get('director') === '1' || urlParams.get('debug') === '1')
+const pvSeek = Number(urlParams.get('pvTime') || NaN)
+const captureMode = ['void', 'signal', 'forming', 'solo', 'trio', 'reef'].includes(capturePreset)
+if (captureMode || pvMode) document.body.classList.add('capture-mode')
+if (pvMode) document.body.classList.add('pv-mode')
+if (pvControls) document.body.classList.add('pv-controls-mode')
+if (pvDirector) document.body.classList.add('pv-director-open')
 const EMOTIONS = {
   '뉴스·시사': '연대형', '경제·투자': '안정형', '요리': '치유형', '게임': '자극형',
   '스포츠': '열정형', '소프트웨어·AI': '몰입형', '환경·기후': '공감형', '광고·마케팅': '영감형',
@@ -137,7 +148,7 @@ let camTween = null
 let overviewPos = new THREE.Vector3(0, 2, 8)
 let overviewTarget = new THREE.Vector3(0, 0, 0)
 
-const renderer = new THREE.WebGLRenderer({ antialias: true })
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.setSize(window.innerWidth, window.innerHeight)
 renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -192,10 +203,14 @@ MODEL_PATHS.forEach((path, i) => {
     coralTemplates[i] = gltf.scene
     if (!coralTemplate) coralTemplate = gltf.scene
     modelsLoaded++
-    if (!addBtn.style.display || addBtn.style.display === 'none') { addBtn.style.display = ''; uploadBtn.style.display = ''; startQuizBtn.style.display = '' }
+    if (!addBtn.style.display || addBtn.style.display === 'none') { addBtn.style.display = ''; uploadBtn.style.display = ''; startQuizBtn.style.display = ''; pvWatchBtn.style.display = '' }
+    maybeBuildCaptureScene()
+    maybeBuildPVScene()
   }, undefined, (err) => {
     console.warn('load failed: ' + path, err)
     modelsLoaded++
+    maybeBuildCaptureScene()
+    maybeBuildPVScene()
   })
 })
 
@@ -295,6 +310,7 @@ function displaceVertices(inner, amplitude) {
 function pickTemplate(data) {
   const available = coralTemplates.filter(Boolean)
   if (available.length === 0) return coralTemplate
+  if (Number.isInteger(data.modelIndex) && coralTemplates[data.modelIndex]) return coralTemplates[data.modelIndex]
   const catIdx = CATEGORIES.indexOf(data.cat)
   const modelIdx = catIdx >= 0 ? catIdx % available.length : corals.length % available.length
   return available[modelIdx]
@@ -322,9 +338,9 @@ function addCoralFromData(data) {
     if (o.isMesh && o.material) {
       o.material = o.material.clone()
       o.material.transparent = true
-      o.material.opacity = 0.4 + data.weight * 0.6
+      o.material.opacity = (0.4 + data.weight * 0.6) * (data.captureOpacity ?? 1)
       o.material.emissive = color.clone()
-      o.material.emissiveIntensity = 0.1 + data.recency * 0.5
+      o.material.emissiveIntensity = (0.1 + data.recency * 0.5) * (data.captureGlow ?? 1)
       o.material.roughness = 0.3 + (1 - Math.min(data.diversity / 15, 1)) * 0.5
       mats.push(o.material)
     }
@@ -333,12 +349,12 @@ function addCoralFromData(data) {
   displaceVertices(inner, 0.15 + data.weight * 0.25)
   inner.position.sub(center)
 
-  const pos = findPlacement()
-  pos.y += (data.weight - 0.3) * 1.2
+  const pos = data.position ? new THREE.Vector3(...data.position) : findPlacement()
+  if (!data.position) pos.y += (data.weight - 0.3) * 1.2
   group.position.copy(pos)
-  group.rotation.y = Math.random() * Math.PI * 2
-  group.rotation.x = (Math.random() - 0.5) * 0.2
-  group.rotation.z = (Math.random() - 0.5) * 0.15
+  group.rotation.y = data.rotationY ?? Math.random() * Math.PI * 2
+  group.rotation.x = data.rotationX ?? (Math.random() - 0.5) * 0.2
+  group.rotation.z = data.rotationZ ?? (Math.random() - 0.5) * 0.15
   group.scale.setScalar(0.001)
 
   const div = document.createElement('div')
@@ -368,9 +384,268 @@ function addCoralFromData(data) {
   reef.add(group)
   corals.push(obj)
 
-  rebuildConnections()
+  if (!captureMode && !pvMode) rebuildConnections()
   updateOverview()
+  return obj
 }
+
+let captureBuilt = false
+function captureData(catIndex, modelIndex, position, weight, diversity, recency, trend, rotationY = 0) {
+  const cat = CATEGORIES[catIndex]
+  return {
+    cat, modelIndex, position, rotationY,
+    weight, count: Math.round(20 + weight * 80),
+    diversity, recency, trend,
+    subcats: [{ cat, weight: 1 }],
+  }
+}
+
+function addCaptureSignal(position = [0, 0, 0], size = 0.08) {
+  const glow = new THREE.Mesh(
+    new THREE.SphereGeometry(size, 24, 16),
+    new THREE.MeshBasicMaterial({ color: 0x7fe9ff }),
+  )
+  glow.position.set(...position)
+  scene.add(glow)
+
+  const light = new THREE.PointLight(0x65dcff, 3.5, 3)
+  light.position.copy(glow.position)
+  scene.add(light)
+}
+
+function maybeBuildCaptureScene() {
+  if (!captureMode || captureBuilt || modelsLoaded < MODEL_PATHS.length || !coralTemplate) return
+  captureBuilt = true
+
+  const presets = {
+    void: [],
+    signal: [
+      { ...captureData(8, 4, [0, 0.05, -0.4], 0.72, 8, 0.5, 0.1, -0.35), captureOpacity: 0.13, captureGlow: 0.35 },
+    ],
+    forming: [
+      { ...captureData(8, 4, [0, 0.05, 0], 0.8, 10, 0.72, 0.25, -0.35), captureOpacity: 0.48, captureGlow: 1.35 },
+    ],
+    solo: [
+      captureData(8, 4, [0, 0, 0], 0.86, 11, 0.72, 0.35, -0.35),
+    ],
+    trio: [
+      captureData(10, 0, [-2.1, -0.15, 0.15], 0.72, 8, 0.82, 0.18, 0.25),
+      captureData(5, 3, [0, 0.25, -0.35], 0.95, 13, 0.92, 0.4, -0.2),
+      captureData(9, 6, [2.15, -0.2, 0.2], 0.66, 6, 0.7, -0.05, 0.45),
+    ],
+    reef: [
+      captureData(10, 0, [-2.8, -0.7, 0.6], 0.58, 6, 0.64, -0.1, 0.25),
+      captureData(6, 1, [-1.9, 0.65, -0.85], 0.78, 9, 0.82, 0.2, -0.35),
+      captureData(8, 2, [-0.75, -0.35, 0.85], 0.68, 7, 0.72, 0.1, 0.4),
+      captureData(5, 3, [0, 0.85, -1.15], 0.96, 14, 0.88, 0.45, -0.1),
+      captureData(2, 4, [0.9, -0.65, 0.7], 0.62, 5, 0.58, -0.15, 0.35),
+      captureData(9, 5, [1.75, 0.45, -0.65], 0.82, 10, 0.76, 0.22, -0.3),
+      captureData(13, 6, [2.8, -0.55, 0.55], 0.55, 6, 0.66, 0.05, 0.5),
+    ],
+  }
+
+  presets[capturePreset].forEach(addCoralFromData)
+  if (capturePreset === 'void') addCaptureSignal([-0.55, 0.15, 0], 0.065)
+  if (capturePreset === 'signal') addCaptureSignal([-0.45, 0.08, 0.35], 0.07)
+  reef.rotation.y = capturePreset === 'solo' ? 0.2 : -0.08
+
+  if (capturePreset === 'void') {
+    overviewTarget.set(0, 0, 0)
+    overviewPos.set(0, 0.5, 5.2)
+  } else if (capturePreset === 'signal') {
+    overviewTarget.set(0, 0.1, 0)
+    overviewPos.set(0, 0.65, 5.1)
+  } else if (capturePreset === 'forming') {
+    overviewTarget.set(0, 0.2, 0)
+    overviewPos.set(0, 0.85, 3.75)
+  } else if (capturePreset === 'solo') {
+    overviewTarget.set(0, 0.25, 0)
+    overviewPos.set(0, 0.85, 3.25)
+  } else if (capturePreset === 'trio') {
+    overviewTarget.set(0, 0.1, 0)
+    overviewPos.set(0, 1.35, 6.25)
+  } else {
+    overviewTarget.set(0, 0, 0)
+    overviewPos.set(0, 1.8, 8.4)
+  }
+  camera.position.copy(overviewPos)
+  controls.target.copy(overviewTarget)
+  controls.update()
+}
+
+let pvBuilt = false
+let pvStart = null
+let pvPaused = false
+let pvPausedAt = 0
+const pvCorals = []
+const PV_CORAL_CONFIG = [
+  { id: 'hero', label: 'Hero coral', catIndex: 8, modelIndex: 4, position: [0, 0, 0.1], weight: 0.9, diversity: 12, recency: 0.82, trend: 0.22, rotationY: -0.35, revealAt: 3.0, role: 'hero', scale: 1 },
+  { id: 'left-blue', label: 'Left blue', catIndex: 10, modelIndex: 0, position: [-2.2, -0.45, 0.45], weight: 0.62, diversity: 6, recency: 0.68, trend: 0.08, rotationY: 0.25, revealAt: 12.2, role: 'trio', scale: 1 },
+  { id: 'right-soft', label: 'Right soft', catIndex: 5, modelIndex: 3, position: [2.05, -0.05, -0.25], weight: 0.82, diversity: 11, recency: 0.78, trend: 0.18, rotationY: -0.2, revealAt: 13.5, role: 'trio', scale: 1 },
+  { id: 'upper-green', label: 'Upper green', catIndex: 6, modelIndex: 1, position: [-1.35, 0.75, -1.05], weight: 0.7, diversity: 8, recency: 0.72, trend: 0.12, rotationY: -0.35, revealAt: 16.5, role: 'reef', scale: 1 },
+  { id: 'lower-violet', label: 'Lower violet', catIndex: 2, modelIndex: 2, position: [0.85, -0.7, 0.85], weight: 0.58, diversity: 5, recency: 0.56, trend: -0.1, rotationY: 0.4, revealAt: 17.1, role: 'reef', scale: 1 },
+  { id: 'far-purple', label: 'Far purple', catIndex: 9, modelIndex: 5, position: [2.9, 0.35, -0.8], weight: 0.76, diversity: 9, recency: 0.72, trend: 0.16, rotationY: -0.3, revealAt: 17.7, role: 'reef', scale: 1 },
+  { id: 'far-left', label: 'Far left', catIndex: 13, modelIndex: 6, position: [-3.15, 0.1, -0.45], weight: 0.54, diversity: 5, recency: 0.62, trend: 0.06, rotationY: 0.5, revealAt: 18.3, role: 'reef', scale: 1 },
+]
+function pvEase(k) { return easeInOut(clamp(k, 0, 1)) }
+function pvFadeIn(t, start, dur) { return pvEase((t - start) / dur) }
+function pvFadeOut(t, start, dur) { return 1 - pvEase((t - start) / dur) }
+function makePVTitleTex() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 256
+  const ctx = c.getContext('2d')
+  ctx.clearRect(0, 0, c.width, c.height)
+  ctx.textAlign = 'center'
+  ctx.fillStyle = 'rgba(220,242,255,0.94)'
+  ctx.shadowColor = 'rgba(120,210,255,0.45)'
+  ctx.shadowBlur = 12
+  ctx.font = '700 66px ui-monospace, SFMono-Regular, Consolas, monospace'
+  ctx.fillText('CORALITHM', 512, 108)
+  ctx.shadowBlur = 8
+  ctx.fillStyle = 'rgba(210,235,255,0.76)'
+  ctx.font = '28px ui-monospace, SFMono-Regular, Consolas, monospace'
+  ctx.fillText('A living reef shaped by you.', 512, 165)
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t
+}
+const pvTitleSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: makePVTitleTex(), transparent: true, opacity: 0, depthTest: false, depthWrite: false }))
+pvTitleSprite.renderOrder = 99
+scene.add(pvTitleSprite)
+function updatePVTitleSprite(opacity) {
+  const forward = camera.getWorldDirection(new THREE.Vector3())
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
+  pvTitleSprite.position.copy(camera.position).add(forward.multiplyScalar(4.1)).add(up.multiplyScalar(-1.05))
+  pvTitleSprite.scale.set(4.3, 1.08, 1)
+  pvTitleSprite.material.opacity = opacity * 0.78
+}
+function setCam(pos, target) {
+  camera.position.set(...pos)
+  controls.target.set(...target)
+  controls.update()
+}
+function lerpCam(t, start, dur, fromPos, toPos, fromTarget, toTarget) {
+  const k = pvEase((t - start) / dur)
+  camera.position.lerpVectors(new THREE.Vector3(...fromPos), new THREE.Vector3(...toPos), k)
+  controls.target.lerpVectors(new THREE.Vector3(...fromTarget), new THREE.Vector3(...toTarget), k)
+  controls.update()
+}
+function addPVCoral(data, revealAt, role) {
+  const c = addCoralFromData(data)
+  if (!c) return null
+  c.pvRevealAt = revealAt
+  c.pvRole = role
+  c.pvScale = data.pvScale ?? 1
+  c.fade = 0
+  c.fadeTarget = 0
+  c.grown = true
+  c.growStart = -100
+  pvCorals.push(c)
+  return c
+}
+function addPVCoralFromConfig(config) {
+  const data = captureData(
+    config.catIndex,
+    config.modelIndex,
+    config.position,
+    config.weight,
+    config.diversity,
+    config.recency,
+    config.trend,
+    config.rotationY,
+  )
+  data.pvScale = config.scale
+  const c = addPVCoral(data, config.revealAt, config.role)
+  if (c) {
+    c.pvConfig = config
+    c.group.position.set(...config.position)
+  }
+  return c
+}
+function maybeBuildPVScene() {
+  if (!pvMode || pvBuilt || modelsLoaded < MODEL_PATHS.length || !coralTemplate) return
+  pvBuilt = true
+  pvStart = null
+  controls.enableRotate = false
+  controls.enablePan = false
+  controls.enableZoom = false
+  scene.fog.density = 0.052
+
+  PV_CORAL_CONFIG.forEach(addPVCoralFromConfig)
+
+  rebuildConnections()
+  if (lineMesh) lineMesh.material.opacity = 0
+  reef.rotation.y = 0
+  setCam([0, 1.25, 7.8], [0, 0.05, 0])
+  window.__coralPVReady = true
+  refreshPVDirectorPanel()
+}
+function updatePVControlState() {
+  const pauseBtn = document.getElementById('pv-pause-btn')
+  if (pauseBtn) pauseBtn.textContent = pvPaused ? 'Play' : 'Pause'
+}
+function resetPVTimeline() {
+  pvStart = timer.getElapsed()
+  pvPaused = false
+  pvPausedAt = 0
+  pvCorals.forEach((c) => {
+    c.fade = 0
+    c.fadeTarget = 0
+  })
+  if (lineMesh) lineMesh.material.opacity = 0
+  pvTitle.style.opacity = '0'
+  updatePVTitleSprite(0)
+  updatePVControlState()
+}
+function togglePVPause() {
+  if (!pvMode || Number.isFinite(pvSeek)) return
+  const now = timer.getElapsed()
+  if (pvStart === null) pvStart = now
+  if (pvPaused) {
+    pvStart = now - pvPausedAt
+    pvPaused = false
+  } else {
+    pvPausedAt = Math.max(0, now - pvStart)
+    pvPaused = true
+  }
+  updatePVControlState()
+}
+function updatePVTimeline(globalT) {
+  if (!pvMode || !pvBuilt) return
+  if (pvStart === null) pvStart = globalT
+  const t = Number.isFinite(pvSeek) ? pvSeek : (pvPaused ? pvPausedAt : globalT - pvStart)
+  const endFade = pvFadeIn(t, 22.5, 2.2)
+  const reefDim = 1 - endFade * 0.22
+
+  pvCorals.forEach((c) => {
+    let visible = pvFadeIn(t, c.pvRevealAt, c.pvRole === 'hero' ? 2.4 : 1.4)
+    if (c.pvRole === 'hero') visible = Math.max(visible, pvFadeIn(t, 8.5, 1.2))
+    c.fade = visible * reefDim
+    c.fadeTarget = c.fade
+    c.data.recency = Math.max(c.data.recency, 0.35 + visible * 0.55)
+  })
+
+  if (t < 3) {
+    setCam([0, 1.25, 7.8], [0, 0.05, 0])
+  } else if (t < 8) {
+    lerpCam(t, 3, 5, [0, 1.25, 7.8], [0, 0.95, 4.25], [0, 0.05, 0], [0, 0.15, 0])
+  } else if (t < 13) {
+    lerpCam(t, 8, 5, [0, 0.95, 4.25], [0.55, 0.62, 2.75], [0, 0.15, 0], [0.1, 0.15, 0])
+  } else if (t < 18) {
+    lerpCam(t, 13, 5, [0.55, 0.72, 3.15], [0, 1.35, 6.25], [0.1, 0.15, 0], [0, 0.08, 0])
+  } else if (t < 23) {
+    lerpCam(t, 18, 5, [0, 1.35, 6.25], [0, 1.85, 8.9], [0, 0.08, 0], [0, 0, 0])
+  } else {
+    setCam([0, 1.85, 8.9], [0, 0, 0])
+  }
+
+  if (lineMesh) {
+    const lineTarget = pvFadeIn(t, 17.5, 3) * pvFadeOut(t, 24.5, 1.5) * 0.18
+    lineMesh.material.opacity = lineTarget
+  }
+  pvTitle.style.opacity = String(endFade)
+  updatePVTitleSprite(endFade)
+  vignette.style.opacity = String(0.8 + endFade * 0.2)
+  reef.rotation.y = -0.05 + Math.sin(t * 0.08) * 0.025
+}
+window.__coralResetPVTimeline = resetPVTimeline
 
 function addCoralManual(cats) {
   const catIndices = cats.map((c) => CATEGORIES.indexOf(c.cat))
@@ -438,6 +713,17 @@ function updateOverview() {
 }
 
 const FLOW_MAX = 3000, FLOW_RADIUS = 12, FLOW_SPEED = 0.3
+function makeParticleTex() {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64
+  const ctx = c.getContext('2d')
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32)
+  g.addColorStop(0, 'rgba(255,255,255,1)')
+  g.addColorStop(0.35, 'rgba(255,255,255,0.7)')
+  g.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64)
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t
+}
+const particleTex = makeParticleTex()
 const flowPos = new Float32Array(FLOW_MAX * 3), flowCol = new Float32Array(FLOW_MAX * 3), flowSeed = new Float32Array(FLOW_MAX)
 for (let i = 0; i < FLOW_MAX; i++) {
   const r = FLOW_RADIUS * Math.cbrt(Math.random()), th = Math.acos(2 * Math.random() - 1), ph = Math.random() * Math.PI * 2
@@ -447,7 +733,7 @@ for (let i = 0; i < FLOW_MAX; i++) {
 const flowGeo = new THREE.BufferGeometry()
 flowGeo.setAttribute('position', new THREE.BufferAttribute(flowPos, 3))
 flowGeo.setAttribute('color', new THREE.BufferAttribute(flowCol, 3))
-scene.add(new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: 0.04, color: 0x5ad0ff, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })))
+scene.add(new THREE.Points(flowGeo, new THREE.PointsMaterial({ size: 0.045, map: particleTex, color: 0x5ad0ff, vertexColors: true, transparent: true, opacity: 0.62, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })))
 function updateFlow(dt, t) {
   const wrap = (v) => (v > FLOW_RADIUS ? v - 2 * FLOW_RADIUS : v < -FLOW_RADIUS ? v + 2 * FLOW_RADIUS : v)
   for (let i = 0; i < FLOW_MAX; i++) {
@@ -464,7 +750,7 @@ const snowPos = new Float32Array(SNOW * 3)
 for (let i = 0; i < SNOW; i++) { snowPos[i * 3] = (Math.random() * 2 - 1) * snowBox.x; snowPos[i * 3 + 1] = snowBox.yBot + Math.random() * (snowBox.yTop - snowBox.yBot); snowPos[i * 3 + 2] = (Math.random() * 2 - 1) * snowBox.z }
 const snowGeo = new THREE.BufferGeometry()
 snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3))
-scene.add(new THREE.Points(snowGeo, new THREE.PointsMaterial({ size: 0.025, color: 0x8abbd6, transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })))
+scene.add(new THREE.Points(snowGeo, new THREE.PointsMaterial({ size: 0.03, map: particleTex, color: 0x8abbd6, transparent: true, opacity: 0.36, blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true })))
 
 function makeShaftTex() {
   const c = document.createElement('canvas'); c.width = 32; c.height = 256
@@ -489,6 +775,155 @@ title.id = 'site-title'
 title.innerHTML = '<small>Start your exploration with</small><span>CORALITHM</span>'
 document.body.appendChild(title)
 
+const pvTitle = document.createElement('div')
+pvTitle.id = 'pv-title'
+pvTitle.innerHTML = '<span>CORALITHM</span><small>A living reef shaped by you.</small>'
+document.body.appendChild(pvTitle)
+
+const pvControlsEl = document.createElement('div')
+pvControlsEl.id = 'pv-controls'
+pvControlsEl.innerHTML = '<button id="pv-replay-btn">Replay</button><button id="pv-pause-btn">Pause</button><button id="pv-director-btn">Director</button><span>R replay / Space pause</span>'
+document.body.appendChild(pvControlsEl)
+pvControlsEl.querySelector('#pv-replay-btn').addEventListener('click', resetPVTimeline)
+pvControlsEl.querySelector('#pv-pause-btn').addEventListener('click', togglePVPause)
+pvControlsEl.querySelector('#pv-director-btn').addEventListener('click', () => {
+  document.body.classList.toggle('pv-director-open')
+  refreshPVDirectorPanel()
+})
+window.addEventListener('keydown', (e) => {
+  if (!pvMode || Number.isFinite(pvSeek)) return
+  if (e.key.toLowerCase() === 'r') resetPVTimeline()
+  if (e.code === 'Space') {
+    e.preventDefault()
+    togglePVPause()
+  }
+})
+
+const pvDirectorEl = document.createElement('div')
+pvDirectorEl.id = 'pv-director'
+pvDirectorEl.innerHTML =
+  '<h3>PV Director</h3>' +
+  '<label>Coral<select id="pv-coral-select"></select></label>' +
+  '<div class="pv-director-grid">' +
+  '<label>X<input id="pv-x" type="range" min="-4.5" max="4.5" step="0.05"></label>' +
+  '<label>Y<input id="pv-y" type="range" min="-2" max="2" step="0.05"></label>' +
+  '<label>Z<input id="pv-z" type="range" min="-2.5" max="2.5" step="0.05"></label>' +
+  '<label>Scale<input id="pv-scale" type="range" min="0.45" max="1.8" step="0.01"></label>' +
+  '<label>Reveal<input id="pv-reveal" type="range" min="0" max="24" step="0.1"></label>' +
+  '<label>Rotate<input id="pv-rotate" type="range" min="-3.14" max="3.14" step="0.01"></label>' +
+  '</div>' +
+  '<div id="pv-values"></div>' +
+  '<div class="pv-director-actions">' +
+  '<button id="pv-focus-btn">Jump to reveal</button>' +
+  '<button id="pv-copy-btn">Copy config</button>' +
+  '</div>' +
+  '<textarea id="pv-config-out" readonly></textarea>'
+document.body.appendChild(pvDirectorEl)
+let pvDirectorSelected = PV_CORAL_CONFIG[0]?.id || ''
+
+function selectedPVConfig() {
+  return PV_CORAL_CONFIG.find((c) => c.id === pvDirectorSelected) || PV_CORAL_CONFIG[0]
+}
+function selectedPVCoral() {
+  const cfg = selectedPVConfig()
+  return pvCorals.find((c) => c.pvConfig === cfg)
+}
+function formatPVConfig() {
+  return JSON.stringify(PV_CORAL_CONFIG.map((cfg) => ({
+    id: cfg.id,
+    position: cfg.position.map((v) => Number(v.toFixed(2))),
+    scale: Number(cfg.scale.toFixed(2)),
+    revealAt: Number(cfg.revealAt.toFixed(1)),
+    rotationY: Number(cfg.rotationY.toFixed(2)),
+  })), null, 2)
+}
+function updatePVDirectorValues() {
+  const cfg = selectedPVConfig()
+  const values = document.getElementById('pv-values')
+  const out = document.getElementById('pv-config-out')
+  if (values) {
+    values.textContent = `pos ${cfg.position.map((v) => v.toFixed(2)).join(', ')} | scale ${cfg.scale.toFixed(2)} | reveal ${cfg.revealAt.toFixed(1)}s | rot ${cfg.rotationY.toFixed(2)}`
+  }
+  if (out) out.value = formatPVConfig()
+}
+function setPVInputValue(id, value) {
+  const el = document.getElementById(id)
+  if (el) el.value = String(value)
+}
+function syncPVDirectorInputs() {
+  const cfg = selectedPVConfig()
+  if (!cfg) return
+  setPVInputValue('pv-x', cfg.position[0])
+  setPVInputValue('pv-y', cfg.position[1])
+  setPVInputValue('pv-z', cfg.position[2])
+  setPVInputValue('pv-scale', cfg.scale)
+  setPVInputValue('pv-reveal', cfg.revealAt)
+  setPVInputValue('pv-rotate', cfg.rotationY)
+  updatePVDirectorValues()
+}
+function refreshPVDirectorPanel() {
+  const select = document.getElementById('pv-coral-select')
+  if (!select) return
+  if (select.options.length !== PV_CORAL_CONFIG.length) {
+    select.innerHTML = ''
+    PV_CORAL_CONFIG.forEach((cfg) => {
+      const opt = document.createElement('option')
+      opt.value = cfg.id
+      opt.textContent = cfg.label
+      select.appendChild(opt)
+    })
+  }
+  select.value = pvDirectorSelected
+  syncPVDirectorInputs()
+}
+function applyPVDirectorChange() {
+  const cfg = selectedPVConfig()
+  if (!cfg) return
+  cfg.position = [
+    Number(document.getElementById('pv-x').value),
+    Number(document.getElementById('pv-y').value),
+    Number(document.getElementById('pv-z').value),
+  ]
+  cfg.scale = Number(document.getElementById('pv-scale').value)
+  cfg.revealAt = Number(document.getElementById('pv-reveal').value)
+  cfg.rotationY = Number(document.getElementById('pv-rotate').value)
+
+  const c = selectedPVCoral()
+  if (c) {
+    c.group.position.set(...cfg.position)
+    c.group.rotation.y = cfg.rotationY
+    c.pvScale = cfg.scale
+    c.pvRevealAt = cfg.revealAt
+    rebuildConnections()
+    if (lineMesh) lineMesh.material.opacity = 0
+  }
+  updatePVDirectorValues()
+}
+function jumpToSelectedReveal() {
+  const cfg = selectedPVConfig()
+  if (!cfg || !pvMode || Number.isFinite(pvSeek)) return
+  pvPaused = true
+  pvPausedAt = Math.max(0, cfg.revealAt + 1)
+  pvStart = timer.getElapsed() - pvPausedAt
+  updatePVControlState()
+}
+function copyPVDirectorConfig() {
+  const out = document.getElementById('pv-config-out')
+  if (!out) return
+  out.select()
+  navigator.clipboard?.writeText(out.value).catch(() => {})
+}
+pvDirectorEl.querySelector('#pv-coral-select').addEventListener('change', (e) => {
+  pvDirectorSelected = e.target.value
+  syncPVDirectorInputs()
+})
+;['pv-x', 'pv-y', 'pv-z', 'pv-scale', 'pv-reveal', 'pv-rotate'].forEach((id) => {
+  pvDirectorEl.querySelector(`#${id}`).addEventListener('input', applyPVDirectorChange)
+})
+pvDirectorEl.querySelector('#pv-focus-btn').addEventListener('click', jumpToSelectedReveal)
+pvDirectorEl.querySelector('#pv-copy-btn').addEventListener('click', copyPVDirectorConfig)
+refreshPVDirectorPanel()
+
 const btnRow = document.createElement('div')
 btnRow.id = 'btn-row'
 document.body.appendChild(btnRow)
@@ -506,6 +941,15 @@ uploadBtn.textContent = '📂 YouTube 데이터 업로드'
 uploadBtn.style.display = 'none'
 uploadBtn.addEventListener('click', () => fileInput.click())
 btnRow.appendChild(uploadBtn)
+
+const pvWatchBtn = document.createElement('button')
+pvWatchBtn.id = 'pv-watch-btn'
+pvWatchBtn.textContent = 'PV'
+pvWatchBtn.style.display = 'none'
+pvWatchBtn.addEventListener('click', () => {
+  window.location.href = `${window.location.pathname}?pv=1&pvControls=1`
+})
+document.body.appendChild(pvWatchBtn)
 
 const tutorialBtn = document.createElement('button')
 tutorialBtn.id = 'tutorial-btn'
@@ -640,11 +1084,15 @@ function hideDetail() { detail.classList.remove('show') }
 const screenshotBtn = document.createElement('button')
 screenshotBtn.id = 'screenshot-btn'
 screenshotBtn.textContent = '📷'
-screenshotBtn.addEventListener('click', () => {
+function exportCanvasPNG() {
   composer.render()
+  return renderer.domElement.toDataURL('image/png')
+}
+window.__coralExportCanvasPNG = exportCanvasPNG
+screenshotBtn.addEventListener('click', () => {
   const link = document.createElement('a')
   link.download = 'coralithm.png'
-  link.href = renderer.domElement.toDataURL('image/png')
+  link.href = exportCanvasPNG()
   link.click()
 })
 document.body.appendChild(screenshotBtn)
@@ -803,7 +1251,7 @@ renderer.setAnimationLoop((time) => {
   const dt = Math.min(timer.getDelta(), 0.05)
   const t = timer.getElapsed()
 
-  if (!focused && !camTween) reef.rotation.y += dt * 0.06
+  if (!focused && !camTween && !pvMode) reef.rotation.y += dt * 0.06
 
   for (let ci = corals.length - 1; ci >= 0; ci--) {
     const c = corals[ci]
@@ -825,15 +1273,16 @@ renderer.setAnimationLoop((time) => {
     const isHovered = (c === hovered && !focused) ? 1 : 0
     const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
-      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3)
-      m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6), 0.08, 1)
+      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1)
+      m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6) * (c.data.captureOpacity ?? 1), 0.02, 1)
     }
     const scaleFade = 0.7 + 0.3 * c.fade
     const breathScale = 1 + 0.02 * Math.sin(t * c.breathFreq + c.phase)
+    const pvScale = c.pvScale ?? 1
     c.group.scale.set(
-      c.baseNorm * c.xzGirth * growK * scaleFade * breathScale,
-      c.baseNorm * c.yStretch * growK * scaleFade * breathScale,
-      c.baseNorm * c.xzGirth * growK * scaleFade * breathScale,
+      c.baseNorm * c.xzGirth * growK * scaleFade * breathScale * pvScale,
+      c.baseNorm * c.yStretch * growK * scaleFade * breathScale * pvScale,
+      c.baseNorm * c.xzGirth * growK * scaleFade * breathScale * pvScale,
     )
     if (!focused) c.group.rotation.y += c.spinSpeed * dt
 
@@ -854,6 +1303,7 @@ renderer.setAnimationLoop((time) => {
 
   if (camTween) updateCamTween()
   else controls.update()
+  updatePVTimeline(t)
   composer.render()
   labelRenderer.render(scene, camera)
 })
