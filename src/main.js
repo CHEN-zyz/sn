@@ -874,6 +874,7 @@ function startCamTween(toPos, toTarget) {
   // Hand the camera fully to the tween so OrbitControls' leftover drag/damping
   // state can't fight it (which caused a snap when control was handed back).
   controls.enabled = false
+  if (camDebug) console.log(`[cam]   tween cam→[${toPos.toArray().map((n) => n.toFixed(1)).join(',')}] tgt→[${toTarget.toArray().map((n) => n.toFixed(1)).join(',')}]`)
 }
 function updateCamTween() {
   if (!camTween) return
@@ -892,7 +893,7 @@ function pickCluster(o) { while (o) { if (o.userData && o.userData.clusterRef) r
 function focusCluster(c, notifyOfficial = true) {
   if (c.removing) return
   focused = c
-  if (camDebug) console.log('[cam] focusCluster → coral', c.data?.cat?.name)
+  if (camDebug) console.log(`[cam] focusCluster→${c.data?.cat?.name} (from ${notifyOfficial ? 'canvas-tap' : 'app/official-UI'})`)
   const cpos = c.group.getWorldPosition(new THREE.Vector3())
   const dir = camera.position.clone().sub(controls.target).normalize()
   startCamTween(cpos.clone().add(dir.multiplyScalar(3.5)), cpos)
@@ -901,7 +902,7 @@ function focusCluster(c, notifyOfficial = true) {
 }
 function resetView(notifyOfficial = true) {
   focused = null
-  if (camDebug) console.log('[cam] resetView → overview', overviewPos.toArray().map((n) => +n.toFixed(2)))
+  if (camDebug) console.log(`[cam] resetView→overview (from ${notifyOfficial ? 'canvas-tap' : 'app/official-UI'})`)
   startCamTween(overviewPos, overviewTarget)
   for (const o of corals) o.fadeTarget = 1
   if (notifyOfficial) officialUI?.onOverview()
@@ -915,7 +916,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const camDrift = camera.position.distanceTo(pointerStart.camPos)
   pointerStart = null
   if (moved >= 6 || elapsed >= 350) {
-    if (camDebug) console.log('[cam] DRAG → orbit, no focus/reset', { moved: +moved.toFixed(1), elapsed: Math.round(elapsed), camDriftDuringPress: +camDrift.toFixed(3) })
+    if (camDebug) console.log(`[cam] DRAG→orbit moved=${moved.toFixed(1)} elapsed=${Math.round(elapsed)} driftDuringPress=${camDrift.toFixed(3)}`)
     return
   }
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
@@ -923,7 +924,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
   const hits = raycaster.intersectObjects(groups, true)
   const c = hits.length ? pickCluster(hits[0].object) : null
-  if (camDebug) console.log('[cam] TAP', { moved: +moved.toFixed(1), elapsed: Math.round(elapsed), camDriftDuringPress: +camDrift.toFixed(3), focused: !!focused, hit: c ? (c === focused ? 'focused-coral' : 'other-coral') : 'void' })
+  if (camDebug) console.log(`[cam] TAP moved=${moved.toFixed(1)} elapsed=${Math.round(elapsed)} driftDuringPress=${camDrift.toFixed(3)} focused=${!!focused} hit=${c ? (c === focused ? 'focused-coral' : 'other-coral') : 'void'}`)
   if (focused) {
     // Detail view: the focused coral is the only active target. Tapping anything
     // else — empty space OR a dimmed background coral — returns to the overview,
