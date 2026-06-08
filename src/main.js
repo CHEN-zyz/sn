@@ -1010,7 +1010,7 @@ renderer.setAnimationLoop((time) => {
     if (ge < GROW_DUR) growK = easeOutBack(clamp(ge / GROW_DUR, 0, 1))
     else if (!c.grown) c.grown = true
 
-    c.fade += (c.fadeTarget - c.fade) * 0.08
+    c.fade += (c.fadeTarget - c.fade) * (c.fadeTarget > c.fade ? 0.025 : 0.08)
     const isHovered = (c === hovered && !focused) ? 1 : 0
     const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
