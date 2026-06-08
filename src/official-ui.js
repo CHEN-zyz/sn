@@ -478,13 +478,15 @@ export function createOfficialUI(api) {
       `
       const select = row.querySelector('select')
       api.categories.forEach(({ cat: optionCat, label }) => {
+        // Skip categories already used by the other two slots — only list selectable ones.
+        const usedInOtherSlot = profile.cats.some((selectedCat, selectedIndex) =>
+          selectedIndex !== index && selectedCat.name === optionCat.name
+        )
+        if (usedInOtherSlot) return
         const option = document.createElement('option')
         option.value = optionCat.name
         option.textContent = label
         option.selected = optionCat.name === cat.name
-        option.disabled = profile.cats.some((selectedCat, selectedIndex) =>
-          selectedIndex !== index && selectedCat.name === optionCat.name
-        )
         select.appendChild(option)
       })
       select.addEventListener('change', () => {
