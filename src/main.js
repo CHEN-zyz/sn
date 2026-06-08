@@ -390,12 +390,7 @@ function addCoralFromData(data) {
   const labelName = data.subcats && data.subcats.length > 1
     ? data.subcats.map((s) => officialCategoryName(s.cat.name)).join('·') + ' 산호'
     : data.cat.name + ' 산호'
-  div.textContent = data.isIntroPreview ? '' : labelName
-  if (data.isIntroPreview) {
-    div.classList.add('intro-preview-label')
-    div.style.display = 'none'
-    div.style.visibility = 'hidden'
-  }
+  div.textContent = labelName
   div.style.opacity = '0'
   const label = new CSS2DObject(div)
   label.position.set(0, (size.y * baseNorm * yStretch) / 2 + 0.6, 0)
@@ -733,11 +728,11 @@ function clearIntroPreview() {
 function seedIntroPreview() {
   if (!officialMode || introPreviewCorals.length || modelsLoaded < MODEL_PATHS.length || !coralTemplate) return
   const previewData = [
-    captureData(8, 4, [-2.8, -0.55, 0.4], 0.72, 8, 0.72, 0.15, 0.2),
-    captureData(5, 3, [-1.25, 0.65, -1.1], 0.88, 11, 0.84, 0.2, -0.35),
-    captureData(6, 1, [0.2, -0.45, 0.75], 0.62, 7, 0.68, 0.05, 0.4),
-    captureData(9, 5, [1.55, 0.55, -0.85], 0.78, 9, 0.76, 0.18, -0.25),
-    captureData(10, 0, [2.9, -0.6, 0.35], 0.58, 6, 0.64, -0.08, 0.45),
+    captureData(8, 4, [-3.05, -0.72, 0.45], 0.72, 8, 0.72, 0.15, 0.2),
+    captureData(5, 3, [-1.55, 0.95, -1.05], 0.88, 11, 0.84, 0.2, -0.35),
+    captureData(6, 1, [0.12, -1.72, 0.85], 0.62, 7, 0.68, 0.05, 0.4),
+    captureData(9, 5, [1.72, 0.92, -0.85], 0.78, 9, 0.76, 0.18, -0.25),
+    captureData(10, 0, [3.05, -0.72, 0.35], 0.58, 6, 0.64, -0.08, 0.45),
   ]
   introPreviewCorals = previewData.map((data) => {
     data.isIntroPreview = true
@@ -745,10 +740,7 @@ function seedIntroPreview() {
     if (coral) {
       coral.isIntroPreview = true
       coral.hideLabel = true
-      coral.labelEl.textContent = ''
-      coral.labelEl.classList.add('intro-preview-label')
       coral.labelEl.style.display = 'none'
-      coral.labelEl.style.visibility = 'hidden'
     }
     return coral
   }).filter(Boolean)

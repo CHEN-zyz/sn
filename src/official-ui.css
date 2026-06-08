@@ -95,11 +95,26 @@ body.official-app:not(.official-overview-view) .label {
 }
 
 .intro-copy {
+  position: relative;
   width: min(760px, 88vw);
   transform: translateY(-1vh);
 }
 
+.intro-copy::before {
+  position: absolute;
+  right: 14%;
+  bottom: 24%;
+  left: 14%;
+  height: 118px;
+  content: "";
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.64), rgba(0, 0, 0, 0.38) 48%, rgba(0, 0, 0, 0) 76%);
+  filter: blur(10px);
+}
+
 .intro-copy > img {
+  position: relative;
+  z-index: 1;
   width: min(720px, 88vw);
   max-height: 350px;
   object-fit: contain;
@@ -683,6 +698,13 @@ body.official-app:not(.official-overview-view) .label {
 
   .intro-copy {
     width: 96vw;
+  }
+
+  .intro-copy::before {
+    right: 2%;
+    bottom: 27%;
+    left: 2%;
+    height: 94px;
   }
 
   .intro-copy > img {
