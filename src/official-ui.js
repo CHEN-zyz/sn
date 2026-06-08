@@ -400,6 +400,7 @@ export function createOfficialUI(api) {
           <p class="weight-instruction"></p>
           <div class="weight-controls"></div>
           <p class="weight-note">비중을 움직이면 산호의 빛과 추천 피드가 함께 달라집니다.</p>
+          <button class="delete-coral" type="button">산호 삭제</button>
         </aside>
         <div class="coral-actions">
           <button class="glass-action add-coral" type="button">+ 산호 추가</button>
@@ -535,17 +536,29 @@ export function createOfficialUI(api) {
   }
 
   function normalizeProfileWeights(profile, changedIndex) {
-    const changed = profile.weights[changedIndex]
-    const others = profile.weights.map((value, index) => index === changedIndex ? 0 : value)
-    const otherTotal = others.reduce((sum, value) => sum + value, 0) || 1
-    const remaining = Math.max(10, 100 - changed)
+    const min = 5
+    const max = 90
+    const changed = Math.min(max, Math.max(min, Math.round(profile.weights[changedIndex])))
+    const otherIndexes = profile.weights.map((_, index) => index).filter((index) => index !== changedIndex)
+    const remaining = 100 - changed
+    const previousOtherTotal = otherIndexes.reduce((sum, index) => sum + Math.max(min, profile.weights[index]), 0)
+
     profile.weights = profile.weights.map((value, index) => {
-      if (index === changedIndex) return Math.min(90, Math.max(10, changed))
-      return Math.max(5, Math.round((value / otherTotal) * remaining))
+      if (index === changedIndex) return changed
+      const ratio = previousOtherTotal ? Math.max(min, value) / previousOtherTotal : 1 / otherIndexes.length
+      return Math.max(min, Math.round(remaining * ratio))
     })
-    const difference = 100 - profile.weights.reduce((sum, value) => sum + value, 0)
-    const receiver = profile.weights.findIndex((_, index) => index !== changedIndex)
-    profile.weights[receiver] += difference
+
+    let difference = 100 - profile.weights.reduce((sum, value) => sum + value, 0)
+    while (difference !== 0) {
+      const index = otherIndexes.find((candidate) => {
+        const nextValue = profile.weights[candidate] + Math.sign(difference)
+        return nextValue >= min && nextValue <= max
+      })
+      if (index === undefined) break
+      profile.weights[index] += Math.sign(difference)
+      difference -= Math.sign(difference)
+    }
   }
 
   function applyProfile() {
@@ -619,6 +632,15 @@ export function createOfficialUI(api) {
   createButton.addEventListener('click', generateCoral)
   root.querySelectorAll('.add-coral').forEach((button) => button.addEventListener('click', () => openSelection(true)))
   root.querySelector('.open-feed').addEventListener('click', openFeed)
+  root.querySelector('.delete-coral').addEventListener('click', () => {
+    if (!activeCoral) return
+    const deleting = activeCoral
+    activeCoral = null
+    closeFeed()
+    api.removeCoral(deleting)
+    api.showOverview()
+    setView('overview')
+  })
   root.querySelector('.feed-close').addEventListener('click', closeFeed)
   root.querySelector('.feed-close-bottom').addEventListener('click', closeFeed)
   root.querySelector('.back-button').addEventListener('click', () => {

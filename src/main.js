@@ -1347,6 +1347,7 @@ if (officialMode) {
       return coral
     },
     updateCoral: updateCoralProfile,
+    removeCoral,
     focusCoral: (coral) => focusCluster(coral, false),
     showOverview: () => resetView(false),
     seedIntro: seedIntroPreview,
