@@ -915,8 +915,15 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
   const hits = raycaster.intersectObjects(groups, true)
   const c = hits.length ? pickCluster(hits[0].object) : null
-  if (c) focusCluster(c)
-  else if (focused) resetView()
+  if (focused) {
+    // Detail view: the focused coral is the only active target. Tapping anything
+    // else — empty space OR a dimmed background coral — returns to the overview,
+    // instead of jerking the camera over to whatever was under the cursor.
+    if (c !== focused) resetView()
+  } else if (c) {
+    // Overview: tap a coral to focus it.
+    focusCluster(c)
+  }
 })
 
 renderer.domElement.addEventListener('pointermove', (e) => {
