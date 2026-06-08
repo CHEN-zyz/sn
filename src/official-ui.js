@@ -90,107 +90,9 @@ function image(photo, index = 0) {
   return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=720&h=460&q=82`
 }
 
-const legacyLink = (value) => `https://example.com/unused-content?label=${encodeURIComponent(value)}`
-const youtube = legacyLink
-const naver = legacyLink
-const spotify = legacyLink
-
-const CONTENT_LIBRARY = {
-  '뉴스·시사': [
-    { source: '네이버 뉴스', title: '오늘의 주요 이슈 한눈에 보기', url: naver('오늘 주요 뉴스'), image: image('news', 0) },
-    { source: '유튜브', title: '하루를 정리하는 저녁 뉴스 브리핑', url: youtube('오늘 뉴스 브리핑'), image: image('news', 1) },
-    { source: 'Google News', title: '관심 주제별 최신 기사 모아보기', url: 'https://news.google.com/home?hl=ko&gl=KR&ceid=KR:ko', image: image('news', 2) },
-    { source: 'BBC Korea', title: '세계의 변화를 설명하는 이야기', url: 'https://www.bbc.com/korean', image: image('news', 3) },
-  ],
-  '경제·투자': [
-    { source: '네이버 금융', title: '오늘의 시장 흐름과 주요 지표', url: 'https://finance.naver.com/', image: image('finance', 0) },
-    { source: '유튜브', title: '처음부터 배우는 경제와 투자', url: youtube('경제 투자 입문'), image: image('finance', 1) },
-    { source: 'TradingView', title: '차트로 읽는 글로벌 시장', url: 'https://kr.tradingview.com/markets/', image: image('finance', 2) },
-    { source: 'KDI', title: '데이터로 보는 한국 경제', url: 'https://eiec.kdi.re.kr/', image: image('finance', 3) },
-  ],
-  '요리': [
-    { source: '만개의레시피', title: '지금 만들기 좋은 한 끼 레시피', url: 'https://www.10000recipe.com/', image: image('cooking', 0) },
-    { source: '네이버 블로그', title: '재료가 단순한 집밥 아이디어', url: naver('간단 집밥 레시피 블로그'), image: image('cooking', 1) },
-    { source: '유튜브', title: '10분 안에 완성하는 초간단 요리', url: youtube('10분 초간단 요리'), image: image('cooking', 2) },
-    { source: 'Pinterest', title: '플레이팅과 디저트 영감 모음', url: 'https://www.pinterest.com/search/pins/?q=food%20plating', image: image('cooking', 3) },
-  ],
-  '게임': [
-    { source: '유튜브', title: '지금 주목받는 게임 플레이', url: youtube('인기 게임 플레이 한국'), image: image('gaming', 0) },
-    { source: 'Steam', title: '새롭게 발견하는 인디 게임', url: 'https://store.steampowered.com/tags/ko/%EC%9D%B8%EB%94%94/', image: image('gaming', 1) },
-    { source: '인벤', title: '업데이트와 신작 소식 모아보기', url: 'https://www.inven.co.kr/', image: image('gaming', 2) },
-    { source: 'Twitch', title: '지금 라이브 중인 게임 채널', url: 'https://www.twitch.tv/directory/category/games', image: image('gaming', 3) },
-  ],
-  '스포츠': [
-    { source: '네이버 스포츠', title: '오늘의 경기와 하이라이트', url: 'https://sports.naver.com/', image: image('sports', 0) },
-    { source: '유튜브', title: '놓치기 아까운 경기 명장면', url: youtube('스포츠 하이라이트 오늘'), image: image('sports', 1) },
-    { source: 'Olympics', title: '종목별 선수와 올림픽 이야기', url: 'https://www.olympics.com/ko/', image: image('sports', 2) },
-    { source: 'Strava', title: '달리고 기록하는 사람들의 활동', url: 'https://www.strava.com/', image: image('sports', 3) },
-  ],
-  '소프트웨어·AI': [
-    { source: 'GitHub', title: '오늘 탐색할 오픈소스 프로젝트', url: 'https://github.com/explore', image: image('software', 0) },
-    { source: '유튜브', title: 'AI와 데이터 기술 쉽게 이해하기', url: youtube('AI 데이터 기술 입문'), image: image('software', 1) },
-    { source: 'Hugging Face', title: '직접 체험하는 새로운 AI 모델', url: 'https://huggingface.co/spaces', image: image('software', 2) },
-    { source: 'Kaggle', title: '데이터셋에서 시작하는 작은 실험', url: 'https://www.kaggle.com/datasets', image: image('software', 3) },
-  ],
-  '환경·기후': [
-    { source: 'TED', title: '기후를 다르게 바라보는 아이디어', url: 'https://www.ted.com/topics/climate', image: image('climate', 0) },
-    { source: '유튜브', title: '일상에서 시작하는 환경 실천', url: youtube('환경 실천 제로웨이스트'), image: image('climate', 1) },
-    { source: 'UNEP', title: '지구에서 지금 일어나고 있는 변화', url: 'https://www.unep.org/news-and-stories', image: image('climate', 2) },
-    { source: '네이버', title: '지속가능한 생활을 위한 아이디어', url: naver('지속가능한 생활 환경'), image: image('climate', 3) },
-  ],
-  '광고·마케팅': [
-    { source: 'Think with Google', title: '사람을 움직인 캠페인 인사이트', url: 'https://www.thinkwithgoogle.com/intl/ko-kr/', image: image('marketing', 0) },
-    { source: '유튜브', title: '브랜드가 기억에 남는 이유', url: youtube('브랜드 마케팅 사례'), image: image('marketing', 1) },
-    { source: 'Behance', title: '새로운 브랜딩 프로젝트 탐색', url: 'https://www.behance.net/search/projects/branding', image: image('marketing', 2) },
-    { source: '네이버 블로그', title: '요즘 콘텐츠 마케팅 사례', url: naver('콘텐츠 마케팅 사례 블로그'), image: image('marketing', 3) },
-  ],
-  '음악': [
-    { source: 'Spotify', title: '취향을 넓혀줄 새로운 플레이리스트', url: spotify('새로운 음악'), image: image('music', 0) },
-    { source: 'YouTube Music', title: '라이브로 다시 듣는 오늘의 음악', url: youtube('라이브 음악 세션'), image: image('music', 1) },
-    { source: 'SoundCloud', title: '아직 알려지지 않은 사운드 발견', url: 'https://soundcloud.com/discover', image: image('music', 2) },
-    { source: 'NPR Music', title: '가까이서 만나는 Tiny Desk 공연', url: 'https://www.npr.org/series/tiny-desk-concerts/', image: image('music', 3) },
-  ],
-  '디자인·예술': [
-    { source: 'Behance', title: '오늘의 큐레이션 디자인 프로젝트', url: 'https://www.behance.net/galleries', image: image('design', 0) },
-    { source: 'Awwwards', title: '인터랙션이 돋보이는 웹사이트', url: 'https://www.awwwards.com/websites/', image: image('design', 1) },
-    { source: 'Google Arts', title: '온라인으로 만나는 예술 컬렉션', url: 'https://artsandculture.google.com/', image: image('design', 2) },
-    { source: 'Pinterest', title: '색과 형태를 위한 무드보드', url: 'https://www.pinterest.com/search/pins/?q=graphic%20design%20inspiration', image: image('design', 3) },
-  ],
-  '여행': [
-    { source: '대한민국 구석구석', title: '이번 주말에 떠날 국내 여행지', url: 'https://korean.visitkorea.or.kr/', image: image('travel', 0) },
-    { source: '유튜브', title: '낯선 도시를 걷는 여행 브이로그', url: youtube('감성 여행 브이로그'), image: image('travel', 1) },
-    { source: '네이버', title: '계절에 어울리는 여행 코스', url: naver('계절 여행 코스'), image: image('travel', 2) },
-    { source: 'Airbnb', title: '머물고 싶은 공간에서 여행 시작하기', url: 'https://www.airbnb.co.kr/', image: image('travel', 3) },
-  ],
-  '영감·인사이트': [
-    { source: 'TED', title: '생각의 방향을 바꾸는 짧은 강연', url: 'https://www.ted.com/talks', image: image('insight', 0) },
-    { source: '유튜브', title: '창작자의 작업과 생각 들여다보기', url: youtube('크리에이터 인터뷰 영감'), image: image('insight', 1) },
-    { source: 'Medium', title: '천천히 읽어볼 새로운 관점', url: 'https://medium.com/tag/creativity', image: image('insight', 2) },
-    { source: '네이버', title: '오늘 기록해두고 싶은 문장과 생각', url: naver('영감 인사이트 에세이'), image: image('insight', 3) },
-  ],
-  '학습': [
-    { source: 'K-MOOC', title: '관심 분야를 넓히는 공개 강의', url: 'https://www.kmooc.kr/', image: image('learning', 0) },
-    { source: 'Khan Academy', title: '기초부터 다시 배우는 핵심 개념', url: 'https://ko.khanacademy.org/', image: image('learning', 1) },
-    { source: '유튜브', title: '오늘 20분 동안 배울 새로운 기술', url: youtube('20분 강의 새로운 기술'), image: image('learning', 2) },
-    { source: 'Coursera', title: '세계 대학의 온라인 수업 탐색', url: 'https://www.coursera.org/', image: image('learning', 3) },
-  ],
-  '스타일': [
-    { source: '무신사', title: '지금 참고하기 좋은 스타일 스냅', url: 'https://www.musinsa.com/snap/main', image: image('style', 0) },
-    { source: 'Vogue Korea', title: '패션과 뷰티의 새로운 흐름', url: 'https://www.vogue.co.kr/', image: image('style', 1) },
-    { source: '유튜브', title: '나에게 맞는 데일리 스타일링', url: youtube('데일리 스타일링 팁'), image: image('style', 2) },
-    { source: 'Pinterest', title: '옷장에 더할 컬러와 실루엣', url: 'https://www.pinterest.com/search/pins/?q=korean%20fashion', image: image('style', 3) },
-  ],
-}
-
 const youtubeVideo = (id) => `https://www.youtube.com/watch?v=${id}`
 const youtubeThumb = (id) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
 const steamImage = (appId) => `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`
-const pagePreview = (url) => `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`
-function imageForContent(item) {
-  const youtubeId = item.url.match(/[?&]v=([^&]+)/)?.[1]
-  if (youtubeId) return youtubeThumb(youtubeId)
-  return pagePreview(item.url)
-}
 
 const SPECIFIC_CONTENT_LIBRARY = {
   '뉴스·시사': [
@@ -327,7 +229,7 @@ function feedFor(profile, labelFor) {
     for (let i = 0; i < counts[catIndex]; i++) {
       if (!library.length) continue
       const item = library[(profile.feedOffset + i + catIndex) % library.length]
-      cards.push({ ...item, image: imageForContent(item), category: labelFor(cat), weight: profile.weights[catIndex] })
+      cards.push({ ...item, category: labelFor(cat), weight: profile.weights[catIndex], color: cat.color })
     }
   })
   return cards.sort((a, b) => b.weight - a.weight || a.title.localeCompare(b.title, 'ko')).slice(0, 6)
@@ -340,6 +242,7 @@ export function createOfficialUI(api) {
   let activeCoral = null
   let addMode = false
   let modelsReady = api.modelsReady()
+  let loadProgress = { loaded: 0, total: 0 }
 
   const root = document.createElement('div')
   root.id = 'official-ui'
@@ -484,7 +387,11 @@ export function createOfficialUI(api) {
     })
     countText.textContent = `${selected.length} / 3`
     createButton.disabled = selected.length !== 3 || !modelsReady
-    createButton.textContent = modelsReady ? '산호 생성하기' : '산호를 준비하고 있어요'
+    createButton.textContent = modelsReady
+      ? '산호 생성하기'
+      : loadProgress.total
+        ? `산호를 준비하고 있어요 (${loadProgress.loaded}/${loadProgress.total})`
+        : '산호를 준비하고 있어요'
   }
 
   function openSelection(isAdd = false) {
@@ -497,12 +404,13 @@ export function createOfficialUI(api) {
 
   function generateCoral() {
     if (selected.length !== 3 || !modelsReady) return
+    generation.classList.remove('is-error')
     generation.classList.add('is-active')
     const cats = [...selected]
     window.setTimeout(() => {
       const coral = api.createCoral(cats)
       if (!coral) {
-        generation.classList.remove('is-active')
+        showGenerationError()
         return
       }
       coral.officialProfile = { cats, weights: [50, 30, 20], feedOffset: api.getCorals().length % 4 }
@@ -513,6 +421,22 @@ export function createOfficialUI(api) {
       setView('coral')
       generation.classList.remove('is-active')
     }, 900)
+  }
+
+  function showGenerationError() {
+    const strong = generation.querySelector('strong')
+    const span = generation.querySelector('span')
+    const prevStrong = strong?.textContent
+    const prevSpan = span?.textContent
+    generation.classList.add('is-error')
+    if (strong) strong.textContent = '산호를 만들지 못했어요'
+    if (span) span.textContent = '잠시 후 다시 시도해 주세요'
+    window.setTimeout(() => {
+      generation.classList.remove('is-active')
+      generation.classList.remove('is-error')
+      if (strong && prevStrong) strong.textContent = prevStrong
+      if (span && prevSpan) span.textContent = prevSpan
+    }, 2400)
   }
 
   function renderCoral() {
@@ -536,7 +460,7 @@ export function createOfficialUI(api) {
       row.querySelector('input').addEventListener('input', (event) => {
         profile.weights[index] = Number(event.target.value)
         normalizeProfileWeights(profile, index)
-        applyProfile()
+        commitWeights()
       })
       controls.appendChild(row)
     })
@@ -599,6 +523,37 @@ export function createOfficialUI(api) {
     }
   }
 
+  // Weight drags update the existing rows in place — rebuilding the DOM (renderCoral)
+  // on every input event would destroy the slider mid-drag and break smooth dragging.
+  function commitWeights() {
+    if (!activeCoral) return
+    const profile = profileFromCoral(activeCoral)
+    api.updateCoral(activeCoral, profile.cats.map((cat, index) => ({ cat, weight: profile.weights[index] })))
+    syncWeightRows(profile)
+    scheduleFeedRefresh()
+  }
+
+  function syncWeightRows(profile) {
+    root.querySelectorAll('.weight-controls .weight-row').forEach((row, index) => {
+      const value = profile.weights[index]
+      const strong = row.querySelector('strong')
+      if (strong) strong.textContent = `${value}%`
+      const input = row.querySelector('input')
+      if (input && document.activeElement !== input) input.value = String(value)
+    })
+  }
+
+  let feedRefreshTimer = null
+  function scheduleFeedRefresh() {
+    if (!feedPanel.classList.contains('is-open')) return
+    if (feedRefreshTimer) return
+    feedRefreshTimer = window.setTimeout(() => {
+      feedRefreshTimer = null
+      renderFeed()
+    }, 140)
+  }
+
+  // Used for tag changes, which alter categories/colors/labels and need a full rebuild.
   function applyProfile() {
     const profile = profileFromCoral(activeCoral)
     api.updateCoral(activeCoral, profile.cats.map((cat, index) => ({ cat, weight: profile.weights[index] })))
@@ -622,7 +577,7 @@ export function createOfficialUI(api) {
       anchor.target = '_blank'
       anchor.rel = 'noopener noreferrer'
       anchor.innerHTML = `
-        <span class="feed-image" style="background-image:url('${card.image}')"></span>
+        <span class="feed-image" style="background-color:#${card.color.toString(16).padStart(6, '0')};background-image:url('${card.image}')"></span>
         <span class="feed-card-copy">
           <span class="feed-meta"><b>${card.source}</b><em>${card.category}</em></span>
           <strong>${card.title}</strong>
@@ -698,8 +653,13 @@ export function createOfficialUI(api) {
   setView('intro')
 
   return {
+    onModelsProgress(loaded, total) {
+      loadProgress = { loaded, total }
+      if (!modelsReady) renderSelection()
+    },
     onModelsReady() {
       modelsReady = true
+      loadProgress = { loaded: loadProgress.total, total: loadProgress.total }
       renderSelection()
       api.seedIntro()
     },

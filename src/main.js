@@ -29,7 +29,6 @@ const CATEGORIES = [
   { name: '학습', color: 0x64dfdf, keys: ['learn','교육','tutorial','lecture','study','course','how to','강의','수학','science','english'] },
   { name: '스타일', color: 0xff85a2, keys: ['fashion','style','패션','beauty','makeup','스타일','haul','outfit','skincare'] },
 ]
-const FALLBACK_CAT = { name: '기타', color: 0x888888, keys: [] }
 const OFFICIAL_CATEGORY_NAMES = {
   '뉴스·시사': '뉴스·시사',
   '경제·투자': '경제·시장·투자',
@@ -63,98 +62,6 @@ if (pvMode) document.body.classList.add('pv-mode')
 if (pvControls) document.body.classList.add('pv-controls-mode')
 if (pvDirector) document.body.classList.add('pv-director-open')
 if (officialMode) document.body.classList.add('official-app')
-const EMOTIONS = {
-  '뉴스·시사': '연대형', '경제·투자': '안정형', '요리': '치유형', '게임': '자극형',
-  '스포츠': '열정형', '소프트웨어·AI': '몰입형', '환경·기후': '공감형', '광고·마케팅': '영감형',
-  '음악': '여운형', '디자인·예술': '감성형', '여행': '설렘형', '영감·인사이트': '성장형',
-  '학습': '탐구형', '스타일': '표현형', '기타': '중립형',
-}
-const Q_POOL = [
-  { w: 3, q: '친구들과 대화할 때 가장 흥미롭게 듣는 주제는?', opts: [
-    { text: '요즘 핫한 뉴스나 사회 이슈', cat: '뉴스·시사' },
-    { text: '맛집이나 새로운 레시피', cat: '요리' },
-    { text: '재테크나 투자 이야기', cat: '경제·투자' },
-    { text: '최근 본 영상이나 음악 추천', cat: '음악' },
-  ]},
-  { w: 3, q: '내 방에서 가장 아끼는 물건은?', opts: [
-    { text: '악기 / 스피커', cat: '음악' },
-    { text: '게임기 / PC', cat: '게임' },
-    { text: '요리 도구 / 커피 용품', cat: '요리' },
-    { text: '운동 기구 / 공', cat: '스포츠' },
-  ]},
-  { w: 1.5, q: '영상을 보며 가장 느끼고 싶은 감정은?', opts: [
-    { text: '편안하고 힐링되는 느낌', cat: '요리' },
-    { text: '두근두근 자극적인 느낌', cat: '게임' },
-    { text: '뭔가 배운 느낌', cat: '학습' },
-    { text: '감동받거나 영감을 얻는 느낌', cat: '영감·인사이트' },
-  ]},
-  { w: 1.5, q: '평소 내 취향을 한 단어로 표현한다면?', opts: [
-    { text: '탐험가', cat: '여행' },
-    { text: '크리에이터', cat: '디자인·예술' },
-    { text: '분석가', cat: '소프트웨어·AI' },
-    { text: '힐러', cat: '요리' },
-  ]},
-  { w: 3, q: '돈이 생긴다면 주로 어디에 쓰나요?', opts: [
-    { text: '여행', cat: '여행' },
-    { text: '전자기기 / 가젯', cat: '소프트웨어·AI' },
-    { text: '옷이나 뷰티', cat: '스타일' },
-    { text: '맛있는 음식 / 맛집', cat: '요리' },
-  ]},
-  { w: 1.5, q: '콘텐츠를 볼 때 가장 얻고 싶은 것은?', opts: [
-    { text: '실용적인 정보', cat: '학습' },
-    { text: '새로운 시각이나 영감', cat: '영감·인사이트' },
-    { text: '스트레스 해소', cat: '게임' },
-    { text: '트렌드 파악', cat: '광고·마케팅' },
-  ]},
-  { w: 3, q: '유튜브 자동재생에서 멈추게 되는 영상은?', opts: [
-    { text: '예쁜 풍경이나 여행 영상', cat: '여행' },
-    { text: '먹방이나 요리 과정', cat: '요리' },
-    { text: '게임 플레이나 하이라이트', cat: '게임' },
-    { text: '신기한 기술이나 과학 영상', cat: '소프트웨어·AI' },
-  ]},
-  { w: 2, q: '자유시간이 생기면 뭘 하고 싶으세요?', opts: [
-    { text: '요리하거나 카페 가기', cat: '요리' },
-    { text: '게임하기', cat: '게임' },
-    { text: '운동하거나 산책하기', cat: '스포츠' },
-    { text: '뭔가 새로 배우기', cat: '학습' },
-  ]},
-  { w: 2, q: '어떤 영상을 보다가 시간 가는 줄 모르게 되셨나요?', opts: [
-    { text: '브이로그 / 일상 영상', cat: '스타일' },
-    { text: '강의나 다큐멘터리', cat: '학습' },
-    { text: '음악 / 커버 영상', cat: '음악' },
-    { text: '스포츠 하이라이트', cat: '스포츠' },
-  ]},
-  { w: 1.5, q: '지금 가장 필요한 건?', opts: [
-    { text: '휴식', cat: '환경·기후' },
-    { text: '자극', cat: '스포츠' },
-    { text: '지식', cat: '소프트웨어·AI' },
-    { text: '영감', cat: '디자인·예술' },
-  ]},
-  { w: 1.5, q: '한 단어로 본인을 표현한다면?', opts: [
-    { text: '모험가', cat: '여행' },
-    { text: '몽상가', cat: '영감·인사이트' },
-    { text: '현실주의자', cat: '뉴스·시사' },
-    { text: '덕후', cat: '게임' },
-  ]},
-  { w: 1.5, q: '가장 즐겨하는 SNS는?', opts: [
-    { text: '인스타그램', cat: '스타일' },
-    { text: '유튜브', cat: '학습' },
-    { text: '틱톡', cat: '음악' },
-    { text: '트위터/X', cat: '뉴스·시사' },
-  ]},
-  { w: 2, q: '최근 가장 궁금했던 건?', opts: [
-    { text: '세계에서 무슨 일이 벌어지고 있는지', cat: '뉴스·시사' },
-    { text: '돈을 어떻게 불릴 수 있는지', cat: '경제·투자' },
-    { text: '새로운 기술이나 AI 트렌드', cat: '소프트웨어·AI' },
-    { text: '환경 문제나 기후 변화', cat: '환경·기후' },
-  ]},
-  { w: 1.5, q: '가장 즐겨하는 취미는?', opts: [
-    { text: '요리 / 베이킹', cat: '요리' },
-    { text: '그림 / 디자인', cat: '디자인·예술' },
-    { text: '독서 / 공부', cat: '학습' },
-    { text: '쇼핑 / 패션', cat: '스타일' },
-  ]},
-]
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
 const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
@@ -228,78 +135,19 @@ MODEL_PATHS.forEach((path, i) => {
     coralTemplates[i] = gltf.scene
     if (!coralTemplate) coralTemplate = gltf.scene
     modelsLoaded++
-    if (!addBtn.style.display || addBtn.style.display === 'none') { addBtn.style.display = ''; uploadBtn.style.display = ''; startQuizBtn.style.display = ''; pvWatchBtn.style.display = '' }
     maybeBuildCaptureScene()
     maybeBuildPVScene()
+    officialUI?.onModelsProgress?.(modelsLoaded, MODEL_PATHS.length)
     if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
   }, undefined, (err) => {
     console.warn('load failed: ' + path, err)
     modelsLoaded++
     maybeBuildCaptureScene()
     maybeBuildPVScene()
+    officialUI?.onModelsProgress?.(modelsLoaded, MODEL_PATHS.length)
     if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
   })
 })
-
-function classifyTitle(title) {
-  const lower = title.toLowerCase()
-  let best = null, bestCount = 0
-  for (const cat of CATEGORIES) {
-    const hits = cat.keys.filter((k) => lower.includes(k)).length
-    if (hits > bestCount) { bestCount = hits; best = cat }
-  }
-  return best || FALLBACK_CAT
-}
-
-function parseWatchHistory(json) {
-  const stats = new Map()
-  const now = Date.now()
-  let entries
-  try { entries = typeof json === 'string' ? JSON.parse(json) : json } catch { return [] }
-  if (!Array.isArray(entries)) return []
-
-  for (const entry of entries) {
-    if (!entry.title || !entry.titleUrl) continue
-    const title = entry.title.replace(/^Watched\s+/, '')
-    const cat = classifyTitle(title)
-    const channel = entry.subtitles && entry.subtitles[0] ? entry.subtitles[0].name : 'unknown'
-    const time = entry.time ? new Date(entry.time).getTime() : 0
-    const daysSince = time ? (now - time) / 86400000 : 999
-
-    if (!stats.has(cat.name)) stats.set(cat.name, { cat, count: 0, channels: new Set(), recentMin: 999, timestamps: [] })
-    const s = stats.get(cat.name)
-    s.count++
-    s.channels.add(channel)
-    s.recentMin = Math.min(s.recentMin, daysSince)
-    s.timestamps.push(time)
-  }
-
-  const total = Array.from(stats.values()).reduce((s, v) => s + v.count, 0) || 1
-  const result = Array.from(stats.values())
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
-    .map((s) => {
-      const trend = computeTrend(s.timestamps)
-      return {
-        cat: s.cat,
-        weight: s.count / total,
-        count: s.count,
-        diversity: s.channels.size,
-        recency: clamp(1 - s.recentMin / 90, 0, 1),
-        trend,
-      }
-    })
-  return result
-}
-
-function computeTrend(timestamps) {
-  if (timestamps.length < 4) return 0
-  const sorted = timestamps.sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  const firstHalf = mid
-  const secondHalf = sorted.length - mid
-  return clamp((secondHalf - firstHalf) / (firstHalf + secondHalf), -1, 1)
-}
 
 function findPlacement() {
   if (corals.length === 0) return new THREE.Vector3(0, 0, 0)
@@ -754,7 +602,7 @@ function seedIntroPreview() {
 function removeCoral(c) {
   c.removing = true
   c.removeStart = timer.getElapsed()
-  if (focused === c) { focused = null; hideDetail() }
+  if (focused === c) focused = null
   for (const o of corals) o.fadeTarget = 1
 }
 
@@ -857,11 +705,6 @@ const composer = new EffectComposer(renderer)
 composer.addPass(new RenderPass(scene, camera))
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.65, 0.65, 0.42))
 composer.addPass(new OutputPass())
-
-const title = document.createElement('div')
-title.id = 'site-title'
-title.innerHTML = '<small>Start your exploration with</small><span>CORALITHM</span>'
-document.body.appendChild(title)
 
 const pvTitle = document.createElement('div')
 pvTitle.id = 'pv-title'
@@ -1012,256 +855,15 @@ pvDirectorEl.querySelector('#pv-focus-btn').addEventListener('click', jumpToSele
 pvDirectorEl.querySelector('#pv-copy-btn').addEventListener('click', copyPVDirectorConfig)
 refreshPVDirectorPanel()
 
-const btnRow = document.createElement('div')
-btnRow.id = 'btn-row'
-document.body.appendChild(btnRow)
-
-const addBtn = document.createElement('button')
-addBtn.id = 'add-btn'
-addBtn.textContent = '+ 산호 추가'
-addBtn.style.display = 'none'
-addBtn.addEventListener('click', openModal)
-btnRow.appendChild(addBtn)
-
-const uploadBtn = document.createElement('button')
-uploadBtn.id = 'upload-btn'
-uploadBtn.textContent = '📂 YouTube 데이터 업로드'
-uploadBtn.style.display = 'none'
-uploadBtn.addEventListener('click', () => fileInput.click())
-btnRow.appendChild(uploadBtn)
-
-const pvWatchBtn = document.createElement('button')
-pvWatchBtn.id = 'pv-watch-btn'
-pvWatchBtn.textContent = 'PV'
-pvWatchBtn.style.display = 'none'
-pvWatchBtn.addEventListener('click', () => {
-  window.location.href = `${window.location.pathname}?pv=1&pvControls=1`
-})
-document.body.appendChild(pvWatchBtn)
-
-const tutorialBtn = document.createElement('button')
-tutorialBtn.id = 'tutorial-btn'
-tutorialBtn.textContent = '?'
-tutorialBtn.addEventListener('click', openTutorial)
-document.body.appendChild(tutorialBtn)
-
-const fileInput = document.createElement('input')
-fileInput.type = 'file'
-fileInput.accept = '.json'
-fileInput.style.display = 'none'
-document.body.appendChild(fileInput)
-fileInput.addEventListener('change', (e) => {
-  const file = e.target.files[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = (ev) => {
-    const data = parseWatchHistory(ev.target.result)
-    if (data.length === 0) { alert('데이터를 찾을 수 없습니다. watch-history.json 파일인지 확인해주세요.'); return }
-    corals.filter((c) => !c.removing).forEach((c) => removeCoral(c))
-    setTimeout(() => { data.forEach((d) => addCoralFromData(d)) }, 1000)
-  }
-  reader.readAsText(file)
-  fileInput.value = ''
-})
-
-const tutorialOverlay = document.createElement('div')
-tutorialOverlay.className = 'modal-overlay'
-tutorialOverlay.innerHTML =
-  '<div class="modal-content" style="position:relative;max-width:560px;text-align:left">' +
-  '<button class="modal-close">&times;</button>' +
-  '<h2>YouTube 데이터 가져오기</h2>' +
-  '<div class="tutorial-steps">' +
-  '<div class="step"><span class="step-num">1</span><a href="https://takeout.google.com" target="_blank" rel="noopener">takeout.google.com</a> 에 접속합니다</div>' +
-  '<div class="step"><span class="step-num">2</span>"모두 선택 해제" 를 누른 뒤 <b>YouTube 및 YouTube Music</b> 만 체크합니다</div>' +
-  '<div class="step"><span class="step-num">3</span>"모든 YouTube 데이터 포함" → <b>시청 기록</b>만 선택, 형식을 <b>JSON</b>으로 변경합니다</div>' +
-  '<div class="step"><span class="step-num">4</span>"내보내기 만들기" → 완료되면 ZIP 다운로드 → 압축 해제</div>' +
-  '<div class="step"><span class="step-num">5</span>폴더 안의 <b>watch-history.json</b> 파일을 이 페이지에 업로드합니다</div>' +
-  '</div>' +
-  '<p style="margin-top:16px;font-size:11px;opacity:0.5">데이터는 브라우저에서만 처리되며 외부로 전송되지 않습니다.</p>' +
-  '</div>'
-document.body.appendChild(tutorialOverlay)
-tutorialOverlay.querySelector('.modal-close').addEventListener('click', () => tutorialOverlay.classList.remove('show'))
-tutorialOverlay.addEventListener('click', (e) => { if (e.target === tutorialOverlay) tutorialOverlay.classList.remove('show') })
-function openTutorial() { tutorialOverlay.classList.add('show') }
-
-const modalOverlay = document.createElement('div')
-modalOverlay.className = 'modal-overlay'
-const modalContent = document.createElement('div')
-modalContent.className = 'modal-content'
-modalContent.style.position = 'relative'
-modalContent.innerHTML =
-  '<button class="modal-close">&times;</button>' +
-  '<h2>어떤 산호를 성장시킬까요?</h2>' +
-  '<p>관심있는 주제 3가지를 선택해주세요.<br>선택한 주제를 기반으로 산호가 성장합니다.</p>' +
-  '<div class="cat-grid"></div>' +
-  '<button id="generate-btn" disabled>산호 생성하기</button>'
-modalOverlay.appendChild(modalContent)
-document.body.appendChild(modalOverlay)
-
-const catGrid = modalContent.querySelector('.cat-grid')
-const genBtn = modalContent.querySelector('#generate-btn')
-modalContent.querySelector('.modal-close').addEventListener('click', closeModal)
-modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal() })
-let selected = []
-
-CATEGORIES.forEach((cat) => {
-  const tag = document.createElement('div')
-  tag.className = 'cat-tag'
-  tag.textContent = cat.name
-  tag.addEventListener('click', () => {
-    const idx = selected.indexOf(cat)
-    if (idx >= 0) selected.splice(idx, 1)
-    else if (selected.length < 3) selected.push(cat)
-    updateTagStates()
-  })
-  tag.dataset.catName = cat.name
-  catGrid.appendChild(tag)
-})
-
-function updateTagStates() {
-  catGrid.querySelectorAll('.cat-tag').forEach((el) => {
-    const cat = CATEGORIES.find((c) => c.name === el.dataset.catName)
-    const idx = selected.indexOf(cat)
-    el.classList.toggle('selected', idx >= 0)
-    const existing = el.querySelector('.order')
-    if (existing) existing.remove()
-    if (idx >= 0) { const b = document.createElement('span'); b.className = 'order'; b.textContent = String(idx + 1); el.appendChild(b) }
-  })
-  genBtn.disabled = selected.length !== 3
-}
-
-function openModal() { selected = []; updateTagStates(); modalOverlay.classList.add('show') }
-function closeModal() { modalOverlay.classList.remove('show') }
-genBtn.addEventListener('click', () => {
-  if (selected.length !== 3) return
-  const cats = selected.map((cat) => ({ cat }))
-  closeModal()
-  addCoralManual(cats)
-})
-
-const detail = document.createElement('div')
-detail.id = 'detail-panel'
-document.body.appendChild(detail)
-
 const vignette = document.createElement('div')
 vignette.id = 'vignette'
 document.body.appendChild(vignette)
 
-function showDetail(c) {
-  const d = c.data
-  let html = '<h2>' + d.cat.name + '</h2>'
-  if (d.subcats) {
-    d.subcats.forEach((s) => {
-      const hex = '#' + new THREE.Color(s.cat.color).getHexString()
-      html += '<div class="row"><span class="dot" style="background:' + hex + '"></span>' + s.cat.name + ' · ' + Math.round(s.weight * 100) + '%</div>'
-    })
-  } else {
-    html += '<div class="row"><span class="dot" style="background:#' + c.color.getHexString() + '"></span>비중 · ' + Math.round(d.weight * 100) + '%</div>'
-  }
-  html += '<div class="row">정서 유형 · ' + (EMOTIONS[d.cat.name] || '중립형') + '</div>'
-  html += '<div class="row">시청 수 · ' + d.count + '회</div>'
-  html += '<div class="row">채널 다양성 · ' + d.diversity + '개</div>'
-  html += '<div class="row">최근 활성도 · ' + (d.recency > 0.6 ? '높음' : d.recency > 0.3 ? '보통' : '낮음') + '</div>'
-  html += '<button id="delete-btn">산호 삭제</button>'
-  detail.innerHTML = html
-  detail.classList.add('show')
-  detail.querySelector('#delete-btn').addEventListener('click', () => { if (focused) removeCoral(focused) })
-}
-function hideDetail() { detail.classList.remove('show') }
-
-const screenshotBtn = document.createElement('button')
-screenshotBtn.id = 'screenshot-btn'
-screenshotBtn.textContent = '📷'
 function exportCanvasPNG() {
   composer.render()
   return renderer.domElement.toDataURL('image/png')
 }
 window.__coralExportCanvasPNG = exportCanvasPNG
-screenshotBtn.addEventListener('click', () => {
-  const link = document.createElement('a')
-  link.download = 'coralithm.png'
-  link.href = exportCanvasPNG()
-  link.click()
-})
-document.body.appendChild(screenshotBtn)
-
-const quizOverlay = document.createElement('div')
-quizOverlay.className = 'modal-overlay'
-const quizContent = document.createElement('div')
-quizContent.className = 'modal-content'
-quizContent.style.position = 'relative'
-quizOverlay.appendChild(quizContent)
-document.body.appendChild(quizOverlay)
-let quizStep = 0, quizPicked = [], quizScores = []
-
-function pickQuizQuestions() {
-  const pool = [...Q_POOL]
-  const picked = []
-  for (let i = 0; i < 3; i++) {
-    const idx = Math.floor(Math.random() * pool.length)
-    picked.push(pool.splice(idx, 1)[0])
-  }
-  return picked
-}
-
-function showQuiz() {
-  quizStep = 0
-  quizPicked = pickQuizQuestions()
-  quizScores = []
-  renderQuizStep()
-  quizOverlay.classList.add('show')
-}
-
-function renderQuizStep() {
-  const q = quizPicked[quizStep]
-  let html = '<h2>' + q.q + '</h2><div class="quiz-opts">'
-  q.opts.forEach((o) => { html += '<button class="quiz-opt" data-cat="' + o.cat + '">' + o.text + '</button>' })
-  html += '</div><p class="quiz-progress">' + (quizStep + 1) + ' / 3</p>'
-  quizContent.innerHTML = html
-  quizContent.querySelectorAll('.quiz-opt').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      quizScores.push({ catName: btn.dataset.cat, weight: quizPicked[quizStep].w })
-      quizStep++
-      if (quizStep < 3) renderQuizStep()
-      else finishQuiz()
-    })
-  })
-}
-
-function finishQuiz() {
-  quizOverlay.classList.remove('show')
-  const merged = new Map()
-  for (const s of quizScores) {
-    merged.set(s.catName, (merged.get(s.catName) || 0) + s.weight)
-  }
-  const totalPts = Array.from(merged.values()).reduce((a, b) => a + b, 0)
-  const sorted = Array.from(merged.entries()).sort((a, b) => b[1] - a[1])
-  const primaryName = sorted[0][0]
-  const primaryCat = CATEGORIES.find((c) => c.name === primaryName) || FALLBACK_CAT
-  const subcats = sorted.map(([name, pts]) => ({
-    cat: CATEGORIES.find((c) => c.name === name) || FALLBACK_CAT,
-    weight: pts / totalPts,
-  }))
-  const topWeight = sorted[0][1] / totalPts
-  const data = {
-    cat: primaryCat,
-    weight: topWeight,
-    count: Math.round(topWeight * 30),
-    diversity: sorted.length + 2,
-    recency: 0.5 + topWeight * 0.4,
-    trend: 0.1,
-    subcats,
-  }
-  addCoralFromData(data)
-}
-
-const startQuizBtn = document.createElement('button')
-startQuizBtn.id = 'start-quiz-btn'
-startQuizBtn.textContent = '🧭 시작 질문'
-startQuizBtn.style.display = 'none'
-startQuizBtn.addEventListener('click', showQuiz)
-btnRow.appendChild(startQuizBtn)
-
 const raycaster = new THREE.Raycaster()
 const hoverRaycaster = new THREE.Raycaster()
 let pointerStart = null
@@ -1285,12 +887,11 @@ function focusCluster(c, notifyOfficial = true) {
   const cpos = c.group.getWorldPosition(new THREE.Vector3())
   const dir = camera.position.clone().sub(controls.target).normalize()
   startCamTween(cpos.clone().add(dir.multiplyScalar(3.5)), cpos)
-  showDetail(c)
   for (const o of corals) o.fadeTarget = (o === c) ? 1 : 0.12
   if (notifyOfficial) officialUI?.onCoralFocused(c)
 }
 function resetView(notifyOfficial = true) {
-  focused = null; startCamTween(overviewPos, overviewTarget); hideDetail()
+  focused = null; startCamTween(overviewPos, overviewTarget)
   for (const o of corals) o.fadeTarget = 1
   if (notifyOfficial) officialUI?.onOverview()
 }

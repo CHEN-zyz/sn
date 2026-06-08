@@ -3,16 +3,6 @@ body.official-app {
   color: #f5f4f7;
 }
 
-body.official-app #site-title,
-body.official-app #btn-row,
-body.official-app #pv-watch-btn,
-body.official-app #tutorial-btn,
-body.official-app #screenshot-btn,
-body.official-app #detail-panel,
-body.official-app .modal-overlay {
-  display: none !important;
-}
-
 body.official-app:not(.official-overview-view) .label {
   display: none !important;
 }
@@ -749,6 +739,14 @@ body.official-app:not(.official-overview-view) .label {
   margin-top: 8px;
   color: rgba(255, 255, 255, 0.5);
   font-size: 11px;
+}
+
+.generation-overlay.is-error .growth-ring {
+  display: none;
+}
+
+.generation-overlay.is-error strong {
+  color: #ff9a9a;
 }
 
 @keyframes coral-ring {
