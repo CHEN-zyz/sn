@@ -55,6 +55,7 @@ const pvMode = urlParams.get('pv') === '1'
 const pvControls = pvMode && (urlParams.get('pvControls') === '1' || urlParams.get('controls') === '1')
 const pvDirector = pvControls && (urlParams.get('director') === '1' || urlParams.get('debug') === '1')
 const pvSeek = Number(urlParams.get('pvTime') || NaN)
+const camDebug = urlParams.get('camdebug') === '1'
 const captureMode = ['void', 'signal', 'forming', 'solo', 'trio', 'reef'].includes(capturePreset)
 const officialMode = !captureMode && !pvMode
 if (captureMode || pvMode) document.body.classList.add('capture-mode')
@@ -891,7 +892,7 @@ function pickCluster(o) { while (o) { if (o.userData && o.userData.clusterRef) r
 function focusCluster(c, notifyOfficial = true) {
   if (c.removing) return
   focused = c
-  controls.enableRotate = false // detail view is a locked inspect view — a tap can't swing the camera
+  if (camDebug) console.log('[cam] focusCluster → coral', c.data?.cat?.name)
   const cpos = c.group.getWorldPosition(new THREE.Vector3())
   const dir = camera.position.clone().sub(controls.target).normalize()
   startCamTween(cpos.clone().add(dir.multiplyScalar(3.5)), cpos)
@@ -900,24 +901,29 @@ function focusCluster(c, notifyOfficial = true) {
 }
 function resetView(notifyOfficial = true) {
   focused = null
-  controls.enableRotate = true // overview: free-orbit the reef again
+  if (camDebug) console.log('[cam] resetView → overview', overviewPos.toArray().map((n) => +n.toFixed(2)))
   startCamTween(overviewPos, overviewTarget)
   for (const o of corals) o.fadeTarget = 1
   if (notifyOfficial) officialUI?.onOverview()
 }
 
-renderer.domElement.addEventListener('pointerdown', (e) => { pointerStart = { x: e.clientX, y: e.clientY, t: performance.now() } })
+renderer.domElement.addEventListener('pointerdown', (e) => { pointerStart = { x: e.clientX, y: e.clientY, t: performance.now(), camPos: camera.position.clone() } })
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!pointerStart) return
   const moved = Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y)
   const elapsed = performance.now() - pointerStart.t
+  const camDrift = camera.position.distanceTo(pointerStart.camPos)
   pointerStart = null
-  if (moved >= 6 || elapsed >= 350) return
+  if (moved >= 6 || elapsed >= 350) {
+    if (camDebug) console.log('[cam] DRAG → orbit, no focus/reset', { moved: +moved.toFixed(1), elapsed: Math.round(elapsed), camDriftDuringPress: +camDrift.toFixed(3) })
+    return
+  }
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
   const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
   const hits = raycaster.intersectObjects(groups, true)
   const c = hits.length ? pickCluster(hits[0].object) : null
+  if (camDebug) console.log('[cam] TAP', { moved: +moved.toFixed(1), elapsed: Math.round(elapsed), camDriftDuringPress: +camDrift.toFixed(3), focused: !!focused, hit: c ? (c === focused ? 'focused-coral' : 'other-coral') : 'void' })
   if (focused) {
     // Detail view: the focused coral is the only active target. Tapping anything
     // else — empty space OR a dimmed background coral — returns to the overview,
