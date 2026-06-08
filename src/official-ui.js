@@ -257,7 +257,12 @@ export function createOfficialUI(api) {
     <main>
       <section class="product-screen intro-screen is-active" data-screen="intro">
         <div class="intro-copy">
-          <img src="/ui/intro-title.png" alt="CORALITHM. 당신의 취향을 선택하고 알고리즘 산호를 만들어보세요. 그 구조를 기반으로 다양한 콘텐츠를 추천해드릴게요.">
+          <p class="intro-kicker">Start your exploration with</p>
+          <h1>Coralithm</h1>
+          <p class="intro-description">
+            <span>당신의 취향을 선택하고 '알고리즘 산호'를 만들어보세요.</span>
+            <span>그 구조를 기반으로 다양한 콘텐츠를 추천해드릴게요.</span>
+          </p>
           <button class="primary-action intro-start" type="button">시작하기</button>
         </div>
         <span class="intro-hint">취향이 머무는 곳에서 산호가 자라납니다</span>
