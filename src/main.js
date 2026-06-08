@@ -881,6 +881,7 @@ function updateCamTween() {
   const a = camTween.ease(k)
   camera.position.lerpVectors(camTween.fromPos, camTween.toPos, a)
   controls.target.lerpVectors(camTween.fromTar, camTween.toTar, a)
+  camera.lookAt(controls.target)
   if (k >= 1) {
     camTween = null
     controls.enabled = true
