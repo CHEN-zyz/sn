@@ -909,30 +909,31 @@ function resetView(notifyOfficial = true) {
   if (notifyOfficial) officialUI?.onOverview()
 }
 
-renderer.domElement.addEventListener('pointerdown', (e) => { pointerStart = { x: e.clientX, y: e.clientY, t: performance.now(), camPos: camera.position.clone() } })
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pointerStart = { x: e.clientX, y: e.clientY, t: performance.now(), camPos: camera.position.clone(), camTarget: controls.target.clone() }
+})
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (!pointerStart) return
   const moved = Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y)
   const elapsed = performance.now() - pointerStart.t
-  const camDrift = camera.position.distanceTo(pointerStart.camPos)
+  const saved = pointerStart
   pointerStart = null
-  if (moved >= 6 || elapsed >= 350) {
-    if (camDebug) console.log(`[cam] DRAG→orbit moved=${moved.toFixed(1)} elapsed=${Math.round(elapsed)} driftDuringPress=${camDrift.toFixed(3)}`)
-    return
-  }
+  if (moved >= 6 || elapsed >= 350) return
+
+  // It's a tap, not a drag. Undo any camera movement OrbitControls applied
+  // during the press — a tap should never rotate/pan the view.
+  camera.position.copy(saved.camPos)
+  controls.target.copy(saved.camTarget)
+
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
   const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
   const hits = raycaster.intersectObjects(groups, true)
   const c = hits.length ? pickCluster(hits[0].object) : null
-  if (camDebug) console.log(`[cam] TAP moved=${moved.toFixed(1)} elapsed=${Math.round(elapsed)} driftDuringPress=${camDrift.toFixed(3)} focused=${!!focused} hit=${c ? (c === focused ? 'focused-coral' : 'other-coral') : 'void'}`)
+  if (camDebug) console.log(`[cam] TAP focused=${!!focused} hit=${c ? (c === focused ? 'focused-coral' : 'other-coral') : 'void'}`)
   if (focused) {
-    // Detail view: the focused coral is the only active target. Tapping anything
-    // else — empty space OR a dimmed background coral — returns to the overview,
-    // instead of jerking the camera over to whatever was under the cursor.
     if (c !== focused) resetView()
   } else if (c) {
-    // Overview: tap a coral to focus it.
     focusCluster(c)
   }
 })
