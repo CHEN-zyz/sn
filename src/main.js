@@ -66,6 +66,7 @@ if (officialMode) document.body.classList.add('official-app')
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
 const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
+const easeOut = (k) => 1 - Math.pow(1 - k, 3)
 const easeOutBack = (k) => { const c = 1.4; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2) }
 const _v = new THREE.Vector3()
 const noise3D = createNoise3D()
@@ -869,23 +870,23 @@ const raycaster = new THREE.Raycaster()
 const hoverRaycaster = new THREE.Raycaster()
 let pointerStart = null
 
-function startCamTween(toPos, toTarget) {
-  camTween = { fromPos: camera.position.clone(), toPos: toPos.clone(), fromTar: controls.target.clone(), toTar: toTarget.clone(), t0: timer.getElapsed(), dur: 1.0 }
-  // Hand the camera fully to the tween so OrbitControls' leftover drag/damping
-  // state can't fight it (which caused a snap when control was handed back).
+function startCamTween(toPos, toTarget, dur = 1.0, ease = easeInOut) {
+  camTween = { fromPos: camera.position.clone(), toPos: toPos.clone(), fromTar: controls.target.clone(), toTar: toTarget.clone(), t0: timer.getElapsed(), dur, ease }
   controls.enabled = false
-  if (camDebug) console.log(`[cam]   tween cam→[${toPos.toArray().map((n) => n.toFixed(1)).join(',')}] tgt→[${toTarget.toArray().map((n) => n.toFixed(1)).join(',')}]`)
+  if (camDebug) console.log(`[cam]   tween cam→[${toPos.toArray().map((n) => n.toFixed(1)).join(',')}] tgt→[${toTarget.toArray().map((n) => n.toFixed(1)).join(',')}] dur=${dur}`)
 }
 function updateCamTween() {
   if (!camTween) return
   let k = (timer.getElapsed() - camTween.t0) / camTween.dur; if (k >= 1) k = 1
-  const a = easeInOut(k)
+  const a = camTween.ease(k)
   camera.position.lerpVectors(camTween.fromPos, camTween.toPos, a)
   controls.target.lerpVectors(camTween.fromTar, camTween.toTar, a)
   if (k >= 1) {
     camTween = null
     controls.enabled = true
-    controls.update() // resync OrbitControls to the final pose — no leftover-inertia snap
+    controls.enableDamping = false
+    controls.update()
+    controls.enableDamping = true
   }
 }
 
@@ -903,7 +904,7 @@ function focusCluster(c, notifyOfficial = true) {
 function resetView(notifyOfficial = true) {
   focused = null
   if (camDebug) console.log(`[cam] resetView→overview (from ${notifyOfficial ? 'canvas-tap' : 'app/official-UI'})`)
-  startCamTween(overviewPos, overviewTarget)
+  startCamTween(overviewPos, overviewTarget, 0.6, easeOut)
   for (const o of corals) o.fadeTarget = 1
   if (notifyOfficial) officialUI?.onOverview()
 }
