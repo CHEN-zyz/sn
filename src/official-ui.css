@@ -45,6 +45,7 @@ body.official-app:not(.official-overview-view) .label {
   text-align: center;
   opacity: 0;
   transition: opacity 0.4s;
+  pointer-events: none;
 }
 
 #official-ui:not([data-view="intro"]) .product-header {
@@ -53,13 +54,15 @@ body.official-app:not(.official-overview-view) .label {
 
 .brand-button {
   display: grid;
-  width: auto;
+  width: max-content;
   min-width: 250px;
+  margin: 0 auto;
   padding: 0;
   border: 0;
   background: transparent;
   color: #fff;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .brand-button span {
@@ -82,10 +85,7 @@ body.official-app:not(.official-overview-view) .label {
 }
 
 .header-context {
-  margin-top: 4px;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  display: none;
 }
 
 .product-screen {

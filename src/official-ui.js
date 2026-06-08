@@ -454,11 +454,7 @@ export function createOfficialUI(api) {
     document.body.classList.toggle('official-detail-view', next === 'coral')
     document.body.classList.toggle('official-overview-view', next === 'overview')
     document.body.classList.toggle('official-select-view', next === 'select')
-    headerContext.textContent = next === 'overview'
-      ? '당신의 취향으로 자란 산호들'
-      : next === 'coral' && activeCoral
-        ? coralName(profileFromCoral(activeCoral), labelFor)
-        : ''
+    headerContext.textContent = ''
     if (next !== 'coral') closeFeed()
     if (next === 'overview') renderOverview()
   }
