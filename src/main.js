@@ -56,7 +56,6 @@ const pvMode = urlParams.get('pv') === '1'
 const pvControls = pvMode && (urlParams.get('pvControls') === '1' || urlParams.get('controls') === '1')
 const pvDirector = pvControls && (urlParams.get('director') === '1' || urlParams.get('debug') === '1')
 const pvSeek = Number(urlParams.get('pvTime') || NaN)
-const camDebug = urlParams.get('camdebug') === '1'
 const captureMode = ['void', 'signal', 'forming', 'solo', 'trio', 'reef'].includes(capturePreset)
 const officialMode = !captureMode && !pvMode
 if (captureMode || pvMode) document.body.classList.add('capture-mode')
@@ -953,7 +952,7 @@ let pointerStart = null
 function startCamTween(toPos, toTarget, dur = 1.0, ease = easeInOut) {
   camTween = { fromPos: camera.position.clone(), toPos: toPos.clone(), fromTar: controls.target.clone(), toTar: toTarget.clone(), t0: timer.getElapsed(), dur, ease }
   controls.enabled = false
-  if (camDebug) console.log(`[cam]   tween cam→[${toPos.toArray().map((n) => n.toFixed(1)).join(',')}] tgt→[${toTarget.toArray().map((n) => n.toFixed(1)).join(',')}] dur=${dur}`)
+
 }
 function updateCamTween() {
   if (!camTween) return
@@ -975,7 +974,7 @@ function focusCluster(c, notifyOfficial = true) {
   if (c.removing) return
   focused = c
   if (hovered) { hovered.labelEl.classList.remove('label-hover'); hovered = null }
-  if (camDebug) console.log(`[cam] focusCluster→${c.data?.cat?.name} (from ${notifyOfficial ? 'canvas-tap' : 'app/official-UI'})`)
+
   const cpos = c.group.getWorldPosition(new THREE.Vector3())
   startCamTween(cpos.clone().add(new THREE.Vector3(0, 0.3, 3.5)), cpos)
   for (const o of corals) o.fadeTarget = (o === c) ? 1 : 0.12
@@ -984,7 +983,7 @@ function focusCluster(c, notifyOfficial = true) {
 function resetView(notifyOfficial = true) {
   focused = null
   updateOverview()
-  if (camDebug) console.log(`[cam] resetView→overview (from ${notifyOfficial ? 'canvas-tap' : 'app/official-UI'})`)
+
   startCamTween(overviewPos.clone(), overviewTarget.clone(), 0.6, easeOut)
   for (const o of corals) o.fadeTarget = 1
   if (notifyOfficial) officialUI?.onOverview()
