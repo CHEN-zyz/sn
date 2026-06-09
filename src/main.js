@@ -1158,19 +1158,20 @@ renderer.setAnimationLoop((time) => {
     )
     if (!focused) c.group.rotation.y += c.spinSpeed * dt
 
-    // Mouse proximity → coral sway: compute target angle, lerp toward it, spring back to neutral
+    // Mouse → coral sway: tilt direction and amount directly maps to mouse offset from coral
     if (officialMode && !focused) {
       if (c._baseRotZ === undefined) { c._baseRotZ = c.group.rotation.z; c._baseRotX = c.group.rotation.x }
       const wp = c.group.getWorldPosition(new THREE.Vector3()).project(camera)
-      const screenDist = Math.hypot(wp.x - mouseNDC.x, wp.y - mouseNDC.y)
+      const dx = mouseNDC.x - wp.x, dy = mouseNDC.y - wp.y
+      const dist = Math.hypot(dx, dy)
       let tgtZ = 0, tgtX = 0
-      if (screenDist < 0.8) {
-        const inf = 1 - screenDist / 0.8
-        tgtZ = (mouseNDC.x - wp.x) * inf * params.mouseSwayStrength
-        tgtX = -(mouseNDC.y - wp.y) * inf * params.mouseSwayStrength
+      if (dist < 1.5) {
+        const scale = (1 - dist / 1.5) * params.mouseSwayStrength
+        tgtZ = dx * scale
+        tgtX = -dy * scale
       }
-      c._swayZ = (c._swayZ || 0) + (tgtZ - (c._swayZ || 0)) * 0.15
-      c._swayX = (c._swayX || 0) + (tgtX - (c._swayX || 0)) * 0.15
+      c._swayZ = (c._swayZ || 0) + (tgtZ - (c._swayZ || 0)) * 0.3
+      c._swayX = (c._swayX || 0) + (tgtX - (c._swayX || 0)) * 0.3
       c.group.rotation.z = c._baseRotZ + c._swayZ
       c.group.rotation.x = c._baseRotX + c._swayX
     }

@@ -24,7 +24,7 @@ export const params = {
   connectionDistance: 2,
   glowIntensity: 1.0,
   flowSpeed: 1.0,
-  mouseSwayStrength: 0.5,
+  mouseSwayStrength: 1.0,
 }
 
 // --- change tracking (for evolution mode) ---
