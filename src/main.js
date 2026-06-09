@@ -246,6 +246,7 @@ function addCoralFromData(data) {
   const pos = data.position ? new THREE.Vector3(...data.position) : findPlacement()
   if (!data.position) pos.y += (data.weight - 0.3) * 1.2
   group.position.copy(pos)
+  group.rotation.order = 'ZXY'
   group.rotation.y = data.rotationY ?? Math.random() * Math.PI * 2
   group.rotation.x = data.rotationX ?? (Math.random() - 0.5) * 0.2
   group.rotation.z = data.rotationZ ?? (Math.random() - 0.5) * 0.15
@@ -1165,8 +1166,8 @@ renderer.setAnimationLoop((time) => {
         tgtZ = (mouseNDC.x - wp.x) * inf * params.mouseSwayStrength
         tgtX = -(mouseNDC.y - wp.y) * inf * params.mouseSwayStrength
       }
-      c._swayZ = (c._swayZ || 0) + (tgtZ - (c._swayZ || 0)) * 0.08
-      c._swayX = (c._swayX || 0) + (tgtX - (c._swayX || 0)) * 0.08
+      c._swayZ = (c._swayZ || 0) + (tgtZ - (c._swayZ || 0)) * 0.15
+      c._swayX = (c._swayX || 0) + (tgtX - (c._swayX || 0)) * 0.15
       c.group.rotation.z = c._baseRotZ + c._swayZ
       c.group.rotation.x = c._baseRotX + c._swayX
     }
