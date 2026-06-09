@@ -3,10 +3,10 @@
 
 export const params = {
   // Scene atmosphere
-  bgTop: '#1a3055',
-  bgMid: '#0c1830',
-  bgBottom: '#040810',
-  fogColor: 0x0c1830,
+  bgTop: '#3568a8',
+  bgMid: '#1a3058',
+  bgBottom: '#0a1428',
+  fogColor: 0x1a3058,
   fogDensity: 0.045,
   bloomStrength: 0.65,
   toneMappingExposure: 0.85,
@@ -55,52 +55,52 @@ export function applyPreset(preset) {
 }
 
 export const PRESETS = {
-  // Blue underwater — visible blue gradient
+  // Blue underwater — clearly blue gradient, balanced
   '기본': {
-    bgTop: '#1a3055', bgMid: '#0c1830', bgBottom: '#040810',
-    fogColor: 0x0c1830, fogDensity: 0.045,
+    bgTop: '#3568a8', bgMid: '#1a3058', bgBottom: '#0a1428',
+    fogColor: 0x1a3058, fogDensity: 0.045,
     bloomStrength: 0.65, toneMappingExposure: 0.9,
-    hemiSkyColor: 0x2a4a6a, hemiGroundColor: 0x0a1020, hemiIntensity: 0.35,
+    hemiSkyColor: 0x4070a0, hemiGroundColor: 0x0a1020, hemiIntensity: 0.4,
     keyLightColor: 0xbfe0ff, keyLightIntensity: 0.8,
     fillLightColor: 0x4488cc, fillLightIntensity: 0.3,
     particleColor: 0x5ad0ff, particleSize: 0.045, particleOpacity: 0.62,
-    shaftOpacity: 0.05,
+    shaftOpacity: 0.06,
     growthSpeed: 1.0, glowIntensity: 1.0,
   },
-  // Deep abyss — very dark blue, corals barely visible
+  // Deep abyss — dark blue, dim corals, barely any light
   '심해': {
-    bgTop: '#0a1830', bgMid: '#050c1a', bgBottom: '#020408',
-    fogColor: 0x050c1a, fogDensity: 0.08,
-    bloomStrength: 0.2, toneMappingExposure: 0.5,
-    hemiSkyColor: 0x102040, hemiGroundColor: 0x040810, hemiIntensity: 0.15,
+    bgTop: '#1a3060', bgMid: '#0c1830', bgBottom: '#040810',
+    fogColor: 0x0c1830, fogDensity: 0.08,
+    bloomStrength: 0.2, toneMappingExposure: 0.55,
+    hemiSkyColor: 0x152848, hemiGroundColor: 0x040810, hemiIntensity: 0.18,
     keyLightColor: 0x2244aa, keyLightIntensity: 0.35,
-    fillLightColor: 0x102244, fillLightIntensity: 0.12,
-    particleColor: 0x2244aa, particleSize: 0.03, particleOpacity: 0.25,
-    shaftOpacity: 0.01,
+    fillLightColor: 0x102244, fillLightIntensity: 0.15,
+    particleColor: 0x2255aa, particleSize: 0.03, particleOpacity: 0.3,
+    shaftOpacity: 0.015,
     growthSpeed: 0.4, glowIntensity: 0.3,
   },
-  // Green sea — bioluminescent glow, dark green water
+  // Green sea — visible green water, corals self-glow
   '생물발광': {
-    bgTop: '#0a3020', bgMid: '#061a10', bgBottom: '#020a06',
-    fogColor: 0x061a10, fogDensity: 0.045,
-    bloomStrength: 0.85, toneMappingExposure: 0.8,
-    hemiSkyColor: 0x154030, hemiGroundColor: 0x081810, hemiIntensity: 0.22,
-    keyLightColor: 0x33aa66, keyLightIntensity: 0.45,
-    fillLightColor: 0x1a6640, fillLightIntensity: 0.25,
+    bgTop: '#1a6838', bgMid: '#0c3018', bgBottom: '#041008',
+    fogColor: 0x0c3018, fogDensity: 0.045,
+    bloomStrength: 0.85, toneMappingExposure: 0.85,
+    hemiSkyColor: 0x1a5035, hemiGroundColor: 0x081a10, hemiIntensity: 0.25,
+    keyLightColor: 0x33bb66, keyLightIntensity: 0.5,
+    fillLightColor: 0x1a7744, fillLightIntensity: 0.3,
     particleColor: 0x33ff88, particleSize: 0.05, particleOpacity: 0.7,
-    shaftOpacity: 0.03,
+    shaftOpacity: 0.04,
     growthSpeed: 0.8, glowIntensity: 2.5,
   },
-  // Shallow warm water — bright, lots of light from surface
+  // Shallow warm water — bright, sunlit, fast coral growth
   '급성장': {
-    bgTop: '#2a5070', bgMid: '#142838', bgBottom: '#0a1820',
-    fogColor: 0x142838, fogDensity: 0.03,
+    bgTop: '#4888b8', bgMid: '#284060', bgBottom: '#102030',
+    fogColor: 0x284060, fogDensity: 0.03,
     bloomStrength: 0.5, toneMappingExposure: 1.3,
-    hemiSkyColor: 0x4488aa, hemiGroundColor: 0x1a3040, hemiIntensity: 0.55,
+    hemiSkyColor: 0x5599bb, hemiGroundColor: 0x1a3040, hemiIntensity: 0.6,
     keyLightColor: 0xffeedd, keyLightIntensity: 1.3,
     fillLightColor: 0x66aacc, fillLightIntensity: 0.5,
-    particleColor: 0x88ccee, particleSize: 0.04, particleOpacity: 0.5,
-    shaftOpacity: 0.2,
+    particleColor: 0x88ccee, particleSize: 0.04, particleOpacity: 0.55,
+    shaftOpacity: 0.22,
     growthSpeed: 2.5, glowIntensity: 1.2,
   },
 }

@@ -128,11 +128,11 @@ function drawBgGradient(topHex, midHex, bottomHex) {
   bgCtx.fillRect(0, 0, 2, 512)
   if (bgTexture) bgTexture.needsUpdate = true
 }
-drawBgGradient('#1a3055', '#0c1830', '#040810')
+drawBgGradient('#3568a8', '#1a3058', '#0a1428')
 const bgTexture = new THREE.CanvasTexture(bgCanvas)
 bgTexture.colorSpace = THREE.SRGBColorSpace
 scene.background = bgTexture
-scene.fog = new THREE.FogExp2(0x0c1830, 0.045)
+scene.fog = new THREE.FogExp2(0x1a3058, 0.045)
 
 const pmrem = new THREE.PMREMGenerator(renderer)
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
