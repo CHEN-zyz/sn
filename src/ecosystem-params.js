@@ -35,11 +35,14 @@ export function onParamChange(fn) { listeners.push(fn) }
 export function getAccumulatedChange() { return changeAccumulator }
 export function resetAccumulatedChange() { changeAccumulator = 0 }
 
+// Only these keys contribute to the evolution accumulator (slider-range values, not colors/hex)
+const TRACKABLE_KEYS = new Set(['bloomStrength', 'fogDensity', 'toneMappingExposure', 'particleOpacity', 'shaftOpacity'])
+
 export function setParam(key, value) {
   const old = params[key]
   if (old === undefined) return
   params[key] = value
-  changeAccumulator += Math.abs(typeof value === 'number' && typeof old === 'number' ? value - old : 1)
+  if (TRACKABLE_KEYS.has(key)) changeAccumulator += Math.abs(value - old)
   listeners.forEach((fn) => fn(key, value, old))
 }
 
