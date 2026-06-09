@@ -51,12 +51,9 @@ function officialCategoryName(name) {
 }
 const WEIGHTS = [0.5, 0.3, 0.2]
 const urlParams = new URLSearchParams(window.location.search)
-const capturePreset = urlParams.get('capture')
 const pvAutoStart = urlParams.get('pv') === '1'
-const captureMode = ['void', 'signal', 'forming', 'solo', 'trio', 'reef'].includes(capturePreset)
-const officialMode = !captureMode
-if (captureMode) document.body.classList.add('capture-mode')
-if (officialMode) document.body.classList.add('official-app')
+const officialMode = true
+document.body.classList.add('official-app')
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
 const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
@@ -166,14 +163,14 @@ MODEL_PATHS.forEach((path, i) => {
     coralTemplates[i] = gltf.scene
     if (!coralTemplate) coralTemplate = gltf.scene
     modelsLoaded++
-    maybeBuildCaptureScene()
+
 
     officialUI?.onModelsProgress?.(modelsLoaded, MODEL_PATHS.length)
     if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
   }, undefined, (err) => {
     console.warn('load failed: ' + path, err)
     modelsLoaded++
-    maybeBuildCaptureScene()
+
 
     officialUI?.onModelsProgress?.(modelsLoaded, MODEL_PATHS.length)
     if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
@@ -244,9 +241,9 @@ function addCoralFromData(data) {
     if (o.isMesh && o.material) {
       o.material = o.material.clone()
       o.material.transparent = true
-      o.material.opacity = (0.4 + data.weight * 0.6) * (data.captureOpacity ?? 1)
+      o.material.opacity = 0.4 + data.weight * 0.6
       o.material.emissive = color.clone()
-      o.material.emissiveIntensity = (0.1 + data.recency * 0.5) * (data.captureGlow ?? 1)
+      o.material.emissiveIntensity = 0.1 + data.recency * 0.5
       o.material.roughness = 0.3 + (1 - Math.min(data.diversity / 15, 1)) * 0.5
       mats.push(o.material)
     }
@@ -291,13 +288,12 @@ function addCoralFromData(data) {
   reef.add(group)
   corals.push(obj)
 
-  if (!captureMode) rebuildConnections()
+  rebuildConnections()
   updateOverview()
   return obj
 }
 
-let captureBuilt = false
-function captureData(catIndex, modelIndex, position, weight, diversity, recency, trend, rotationY = 0) {
+function makeCoralData(catIndex, modelIndex, position, weight, diversity, recency, trend, rotationY = 0) {
   const cat = CATEGORIES[catIndex]
   return {
     cat, modelIndex, position, rotationY,
@@ -306,80 +302,6 @@ function captureData(catIndex, modelIndex, position, weight, diversity, recency,
     subcats: [{ cat, weight: 1 }],
   }
 }
-
-function addCaptureSignal(position = [0, 0, 0], size = 0.08) {
-  const glow = new THREE.Mesh(
-    new THREE.SphereGeometry(size, 24, 16),
-    new THREE.MeshBasicMaterial({ color: 0x7fe9ff }),
-  )
-  glow.position.set(...position)
-  scene.add(glow)
-
-  const light = new THREE.PointLight(0x65dcff, 3.5, 3)
-  light.position.copy(glow.position)
-  scene.add(light)
-}
-
-function maybeBuildCaptureScene() {
-  if (!captureMode || captureBuilt || modelsLoaded < MODEL_PATHS.length || !coralTemplate) return
-  captureBuilt = true
-
-  const presets = {
-    void: [],
-    signal: [
-      { ...captureData(8, 4, [0, 0.05, -0.4], 0.72, 8, 0.5, 0.1, -0.35), captureOpacity: 0.13, captureGlow: 0.35 },
-    ],
-    forming: [
-      { ...captureData(8, 4, [0, 0.05, 0], 0.8, 10, 0.72, 0.25, -0.35), captureOpacity: 0.48, captureGlow: 1.35 },
-    ],
-    solo: [
-      captureData(8, 4, [0, 0, 0], 0.86, 11, 0.72, 0.35, -0.35),
-    ],
-    trio: [
-      captureData(10, 0, [-2.1, -0.15, 0.15], 0.72, 8, 0.82, 0.18, 0.25),
-      captureData(5, 3, [0, 0.25, -0.35], 0.95, 13, 0.92, 0.4, -0.2),
-      captureData(9, 6, [2.15, -0.2, 0.2], 0.66, 6, 0.7, -0.05, 0.45),
-    ],
-    reef: [
-      captureData(10, 0, [-2.8, -0.7, 0.6], 0.58, 6, 0.64, -0.1, 0.25),
-      captureData(6, 1, [-1.9, 0.65, -0.85], 0.78, 9, 0.82, 0.2, -0.35),
-      captureData(8, 2, [-0.75, -0.35, 0.85], 0.68, 7, 0.72, 0.1, 0.4),
-      captureData(5, 3, [0, 0.85, -1.15], 0.96, 14, 0.88, 0.45, -0.1),
-      captureData(2, 4, [0.9, -0.65, 0.7], 0.62, 5, 0.58, -0.15, 0.35),
-      captureData(9, 5, [1.75, 0.45, -0.65], 0.82, 10, 0.76, 0.22, -0.3),
-      captureData(13, 6, [2.8, -0.55, 0.55], 0.55, 6, 0.66, 0.05, 0.5),
-    ],
-  }
-
-  presets[capturePreset].forEach(addCoralFromData)
-  if (capturePreset === 'void') addCaptureSignal([-0.55, 0.15, 0], 0.065)
-  if (capturePreset === 'signal') addCaptureSignal([-0.45, 0.08, 0.35], 0.07)
-  reef.rotation.y = capturePreset === 'solo' ? 0.2 : -0.08
-
-  if (capturePreset === 'void') {
-    overviewTarget.set(0, 0, 0)
-    overviewPos.set(0, 0.5, 5.2)
-  } else if (capturePreset === 'signal') {
-    overviewTarget.set(0, 0.1, 0)
-    overviewPos.set(0, 0.65, 5.1)
-  } else if (capturePreset === 'forming') {
-    overviewTarget.set(0, 0.2, 0)
-    overviewPos.set(0, 0.85, 3.75)
-  } else if (capturePreset === 'solo') {
-    overviewTarget.set(0, 0.25, 0)
-    overviewPos.set(0, 0.85, 3.25)
-  } else if (capturePreset === 'trio') {
-    overviewTarget.set(0, 0.1, 0)
-    overviewPos.set(0, 1.35, 6.25)
-  } else {
-    overviewTarget.set(0, 0, 0)
-    overviewPos.set(0, 1.8, 8.4)
-  }
-  camera.position.copy(overviewPos)
-  controls.target.copy(overviewTarget)
-  controls.update()
-}
-
 
 // === Integrated PV system ===
 let pvPlaying = false
@@ -590,11 +512,11 @@ function clearIntroPreview() {
 function seedIntroPreview() {
   if (!officialMode || introPreviewCorals.length || modelsLoaded < MODEL_PATHS.length || !coralTemplate) return
   const previewData = [
-    captureData(8, 4, [-2.8, -0.55, 0.4], 0.72, 8, 0.72, 0.15, 0.2),
-    captureData(5, 3, [-1.25, 0.65, -1.1], 0.88, 11, 0.84, 0.2, -0.35),
-    captureData(6, 1, [0.2, -0.45, 0.75], 0.62, 7, 0.68, 0.05, 0.4),
-    captureData(9, 5, [1.55, 0.55, -0.85], 0.78, 9, 0.76, 0.18, -0.25),
-    captureData(10, 0, [2.9, -0.6, 0.35], 0.58, 6, 0.64, -0.08, 0.45),
+    makeCoralData(8, 4, [-2.8, -0.55, 0.4], 0.72, 8, 0.72, 0.15, 0.2),
+    makeCoralData(5, 3, [-1.25, 0.65, -1.1], 0.88, 11, 0.84, 0.2, -0.35),
+    makeCoralData(6, 1, [0.2, -0.45, 0.75], 0.62, 7, 0.68, 0.05, 0.4),
+    makeCoralData(9, 5, [1.55, 0.55, -0.85], 0.78, 9, 0.76, 0.18, -0.25),
+    makeCoralData(10, 0, [2.9, -0.6, 0.35], 0.58, 6, 0.64, -0.08, 0.45),
   ]
   introPreviewCorals = previewData.map((data) => {
     data.isIntroPreview = true
@@ -772,7 +694,17 @@ function exportCanvasPNG() {
   composer.render()
   return renderer.domElement.toDataURL('image/png')
 }
-window.__coralExportCanvasPNG = exportCanvasPNG
+const screenshotBtn = document.createElement('button')
+screenshotBtn.id = 'screenshot-btn'
+screenshotBtn.textContent = '📷'
+screenshotBtn.addEventListener('click', () => {
+  const link = document.createElement('a')
+  link.download = 'coralithm.png'
+  link.href = exportCanvasPNG()
+  link.click()
+})
+document.body.appendChild(screenshotBtn)
+
 const raycaster = new THREE.Raycaster()
 const hoverRaycaster = new THREE.Raycaster()
 let pointerStart = null
@@ -821,7 +753,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   pointerStart = { x: e.clientX, y: e.clientY, t: performance.now(), camPos: camera.position.clone(), camTarget: controls.target.clone() }
 
   // Detect coral hit for drag-on-coral
-  if (officialMode && !focused && !captureMode) {
+  if (!focused) {
     const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
     raycaster.setFromCamera(ndc, camera)
     const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
@@ -880,7 +812,7 @@ window.addEventListener('pointermove', (e) => {
 
 // Double-click void → generate new coral
 renderer.domElement.addEventListener('dblclick', (e) => {
-  if (!officialMode || focused || captureMode) return
+  if (focused) return
   if (!coralTemplate || modelsLoaded < MODEL_PATHS.length) return
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
@@ -991,8 +923,8 @@ renderer.setAnimationLoop((time) => {
     const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
       const glowFromActivity = 0.15 + params.activity * 0.85
-      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1) * glowFromActivity
-      m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6) * (c.data.captureOpacity ?? 1), 0.02, 1)
+      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * glowFromActivity
+      m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6), 0.02, 1)
     }
     const scaleFade = 0.7 + 0.3 * c.fade
     const breathScale = 1 + 0.02 * Math.sin(t * c.breathFreq + c.phase)
