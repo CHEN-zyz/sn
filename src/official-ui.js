@@ -1,3 +1,5 @@
+import { params, setParam, applyPreset, PRESETS, PARAM_DEFS, onParamChange } from './ecosystem-params.js'
+
 const PHOTO = {
   news: [
     'photo-1495020689067-958852a7765e',
@@ -311,6 +313,13 @@ export function createOfficialUI(api) {
           <div class="weight-controls"></div>
           <p class="weight-note">비중을 움직이면 산호의 빛과 추천 피드가 함께 달라집니다.</p>
           <button class="delete-coral" type="button">산호 삭제</button>
+          <div class="ecosystem-params">
+            <button class="params-toggle" type="button">생태계 설정 ▾</button>
+            <div class="params-body" hidden>
+              <div class="preset-bar"></div>
+              <div class="param-sliders"></div>
+            </div>
+          </div>
         </aside>
         <div class="coral-actions">
           <button class="glass-action add-coral" type="button">+ 산호 추가</button>
@@ -650,6 +659,57 @@ export function createOfficialUI(api) {
     api.showOverview()
     setView('overview')
   })
+
+  // Ecosystem params panel
+  const paramsToggle = root.querySelector('.params-toggle')
+  const paramsBody = root.querySelector('.params-body')
+  const presetBar = root.querySelector('.preset-bar')
+  const paramSliders = root.querySelector('.param-sliders')
+
+  paramsToggle.addEventListener('click', () => {
+    const open = !paramsBody.hidden
+    paramsBody.hidden = open
+    paramsToggle.textContent = open ? '생태계 설정 ▾' : '생태계 설정 ▴'
+  })
+
+  Object.keys(PRESETS).forEach((name) => {
+    const btn = document.createElement('button')
+    btn.className = 'preset-btn'
+    btn.type = 'button'
+    btn.textContent = name
+    btn.addEventListener('click', () => { applyPreset(PRESETS[name]); syncParamSliders() })
+    presetBar.appendChild(btn)
+  })
+
+  function renderParamSliders() {
+    paramSliders.innerHTML = ''
+    PARAM_DEFS.forEach(({ key, label, min, max, step }) => {
+      const row = document.createElement('label')
+      row.className = 'param-row'
+      row.innerHTML = `
+        <span class="param-label">${label}</span>
+        <strong>${params[key]}</strong>
+        <input type="range" min="${min}" max="${max}" step="${step}" value="${params[key]}" data-key="${key}">
+      `
+      row.querySelector('input').addEventListener('input', (e) => {
+        setParam(key, Number(e.target.value))
+        row.querySelector('strong').textContent = params[key]
+      })
+      paramSliders.appendChild(row)
+    })
+  }
+
+  function syncParamSliders() {
+    paramSliders.querySelectorAll('input[data-key]').forEach((input) => {
+      const key = input.dataset.key
+      input.value = String(params[key])
+      const strong = input.closest('.param-row')?.querySelector('strong')
+      if (strong) strong.textContent = params[key]
+    })
+  }
+
+  renderParamSliders()
+  onParamChange(() => syncParamSliders())
 
   renderSelection()
   setView('intro')
