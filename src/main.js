@@ -10,7 +10,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { createNoise3D } from 'simplex-noise'
 import { createOfficialUI } from './official-ui.js'
-import { params, getAccumulatedChange, resetAccumulatedChange, EVOLUTION_THRESHOLD } from './ecosystem-params.js'
+import { params, setParam, getAccumulatedChange, resetAccumulatedChange, EVOLUTION_THRESHOLD } from './ecosystem-params.js'
 import './style.css'
 import './official-ui.css'
 
