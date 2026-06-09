@@ -671,7 +671,7 @@ function updateOverview() {
   overviewPos.set(center.x, center.y + sphere.radius * 0.4, center.z + Math.max(sphere.radius * 2.2, 5))
 }
 
-const FLOW_MAX = 3000, FLOW_RADIUS = 12, FLOW_SPEED = 0.3
+const FLOW_MAX = 6000, FLOW_RADIUS = 12, FLOW_SPEED = 0.3
 function makeParticleTex() {
   const c = document.createElement('canvas'); c.width = 64; c.height = 64
   const ctx = c.getContext('2d')
@@ -1136,14 +1136,15 @@ renderer.setAnimationLoop((time) => {
 
     let growK = 1
     const ge = t - c.growStart
-    if (ge < GROW_DUR) growK = easeOutBack(clamp(ge / GROW_DUR, 0, 1))
+    const effectiveGrowDur = GROW_DUR / params.growthSpeed
+    if (ge < effectiveGrowDur) growK = easeOutBack(clamp(ge / effectiveGrowDur, 0, 1))
     else if (!c.grown) c.grown = true
 
     c.fade += (c.fadeTarget - c.fade) * 0.08
     const isHovered = (c === hovered && !focused) ? 1 : 0
     const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
-      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1)
+      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1) * params.glowIntensity
       m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6) * (c.data.captureOpacity ?? 1), 0.02, 1)
     }
     const scaleFade = 0.7 + 0.3 * c.fade
