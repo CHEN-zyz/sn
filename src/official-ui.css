@@ -199,6 +199,66 @@ body.official-app:not(.official-overview-view) .label {
   color: rgba(255, 255, 255, 0.36);
   font-size: 10px;
   letter-spacing: 0.13em;
+  transition: opacity 0.5s;
+}
+
+.pv-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 30;
+  padding: 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(10, 20, 35, 0.5);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.75);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: opacity 0.5s, background 0.2s;
+}
+
+.pv-btn:hover {
+  background: rgba(30, 60, 90, 0.7);
+  color: #fff;
+}
+
+.pv-card {
+  position: fixed;
+  z-index: 25;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(10, 18, 28, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  max-width: 240px;
+}
+
+.pv-card-name {
+  display: block;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.pv-card-imgs {
+  display: flex;
+  gap: 6px;
+}
+
+.pv-card-imgs img {
+  width: 100px;
+  height: 65px;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 .select-screen {

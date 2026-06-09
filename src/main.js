@@ -52,16 +52,10 @@ function officialCategoryName(name) {
 const WEIGHTS = [0.5, 0.3, 0.2]
 const urlParams = new URLSearchParams(window.location.search)
 const capturePreset = urlParams.get('capture')
-const pvMode = urlParams.get('pv') === '1'
-const pvControls = pvMode && (urlParams.get('pvControls') === '1' || urlParams.get('controls') === '1')
-const pvDirector = pvControls && (urlParams.get('director') === '1' || urlParams.get('debug') === '1')
-const pvSeek = Number(urlParams.get('pvTime') || NaN)
+const pvAutoStart = urlParams.get('pv') === '1'
 const captureMode = ['void', 'signal', 'forming', 'solo', 'trio', 'reef'].includes(capturePreset)
-const officialMode = !captureMode && !pvMode
-if (captureMode || pvMode) document.body.classList.add('capture-mode')
-if (pvMode) document.body.classList.add('pv-mode')
-if (pvControls) document.body.classList.add('pv-controls-mode')
-if (pvDirector) document.body.classList.add('pv-director-open')
+const officialMode = !captureMode
+if (captureMode) document.body.classList.add('capture-mode')
 if (officialMode) document.body.classList.add('official-app')
 const GROW_DUR = 1.8
 const clamp = THREE.MathUtils.clamp
@@ -173,14 +167,14 @@ MODEL_PATHS.forEach((path, i) => {
     if (!coralTemplate) coralTemplate = gltf.scene
     modelsLoaded++
     maybeBuildCaptureScene()
-    maybeBuildPVScene()
+
     officialUI?.onModelsProgress?.(modelsLoaded, MODEL_PATHS.length)
     if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
   }, undefined, (err) => {
     console.warn('load failed: ' + path, err)
     modelsLoaded++
     maybeBuildCaptureScene()
-    maybeBuildPVScene()
+
     officialUI?.onModelsProgress?.(modelsLoaded, MODEL_PATHS.length)
     if (modelsLoaded === MODEL_PATHS.length) officialUI?.onModelsReady()
   })
@@ -297,7 +291,7 @@ function addCoralFromData(data) {
   reef.add(group)
   corals.push(obj)
 
-  if (!captureMode && !pvMode) rebuildConnections()
+  if (!captureMode) rebuildConnections()
   updateOverview()
   return obj
 }
@@ -386,179 +380,160 @@ function maybeBuildCaptureScene() {
   controls.update()
 }
 
-let pvBuilt = false
-let pvStart = null
-let pvPaused = false
-let pvPausedAt = 0
-const pvCorals = []
-const PV_CORAL_CONFIG = [
-  { id: 'hero', label: 'Hero coral', catIndex: 8, modelIndex: 4, position: [0, 0, 0.1], weight: 0.9, diversity: 12, recency: 0.82, trend: 0.22, rotationY: -0.35, revealAt: 3.0, role: 'hero', scale: 1 },
-  { id: 'left-blue', label: 'Left blue', catIndex: 10, modelIndex: 0, position: [-2.2, -0.45, 0.45], weight: 0.62, diversity: 6, recency: 0.68, trend: 0.08, rotationY: 0.25, revealAt: 12.2, role: 'trio', scale: 1 },
-  { id: 'right-soft', label: 'Right soft', catIndex: 5, modelIndex: 3, position: [2.05, -0.05, -0.25], weight: 0.82, diversity: 11, recency: 0.78, trend: 0.18, rotationY: -0.2, revealAt: 13.5, role: 'trio', scale: 1 },
-  { id: 'upper-green', label: 'Upper green', catIndex: 6, modelIndex: 1, position: [-1.35, 0.75, -1.05], weight: 0.7, diversity: 8, recency: 0.72, trend: 0.12, rotationY: -0.35, revealAt: 16.5, role: 'reef', scale: 1 },
-  { id: 'lower-violet', label: 'Lower violet', catIndex: 2, modelIndex: 2, position: [0.85, -0.7, 0.85], weight: 0.58, diversity: 5, recency: 0.56, trend: -0.1, rotationY: 0.4, revealAt: 17.1, role: 'reef', scale: 1 },
-  { id: 'far-purple', label: 'Far purple', catIndex: 9, modelIndex: 5, position: [2.9, 0.35, -0.8], weight: 0.76, diversity: 9, recency: 0.72, trend: 0.16, rotationY: -0.3, revealAt: 17.7, role: 'reef', scale: 1 },
-  { id: 'far-left', label: 'Far left', catIndex: 13, modelIndex: 6, position: [-3.15, 0.1, -0.45], weight: 0.54, diversity: 5, recency: 0.62, trend: 0.06, rotationY: 0.5, revealAt: 18.3, role: 'reef', scale: 1 },
+
+// === Integrated PV system ===
+let pvPlaying = false
+let pvElapsed = 0
+const pvCreatedCorals = []
+const pvCards = []
+
+// PV coral schedule: [time, position]
+const PV_SCHEDULE = [
+  { t: 4, pos: [0, 0, 0] },
+  { t: 9, pos: [-2.2, -0.3, 0.5] },
+  { t: 13, pos: [2.0, 0.1, -0.3] },
+  { t: 16, pos: [-1.3, 0.6, -1.0] },
+  { t: 17.5, pos: [0.8, -0.5, 0.8] },
 ]
-function pvEase(k) { return easeInOut(clamp(k, 0, 1)) }
-function pvFadeIn(t, start, dur) { return pvEase((t - start) / dur) }
-function pvFadeOut(t, start, dur) { return 1 - pvEase((t - start) / dur) }
-function makePVTitleTex() {
-  const c = document.createElement('canvas'); c.width = 1024; c.height = 256
-  const ctx = c.getContext('2d')
-  ctx.clearRect(0, 0, c.width, c.height)
-  ctx.textAlign = 'center'
-  ctx.fillStyle = 'rgba(220,242,255,0.94)'
-  ctx.shadowColor = 'rgba(120,210,255,0.45)'
-  ctx.shadowBlur = 12
-  ctx.font = '700 66px ui-monospace, SFMono-Regular, Consolas, monospace'
-  ctx.fillText('CORALITHM', 512, 108)
-  ctx.shadowBlur = 8
-  ctx.fillStyle = 'rgba(210,235,255,0.76)'
-  ctx.font = '28px ui-monospace, SFMono-Regular, Consolas, monospace'
-  ctx.fillText('A living reef shaped by you.', 512, 165)
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t
-}
-const pvTitleSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: makePVTitleTex(), transparent: true, opacity: 0, depthTest: false, depthWrite: false }))
-pvTitleSprite.renderOrder = 99
-scene.add(pvTitleSprite)
-function updatePVTitleSprite(opacity) {
-  const forward = camera.getWorldDirection(new THREE.Vector3())
-  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion)
-  pvTitleSprite.position.copy(camera.position).add(forward.multiplyScalar(4.1)).add(up.multiplyScalar(-1.05))
-  pvTitleSprite.scale.set(4.3, 1.08, 1)
-  pvTitleSprite.material.opacity = opacity * 0.78
-}
-function setCam(pos, target) {
-  camera.position.set(...pos)
-  controls.target.set(...target)
-  controls.update()
-}
-function lerpCam(t, start, dur, fromPos, toPos, fromTarget, toTarget) {
-  const k = pvEase((t - start) / dur)
-  camera.position.lerpVectors(new THREE.Vector3(...fromPos), new THREE.Vector3(...toPos), k)
-  controls.target.lerpVectors(new THREE.Vector3(...fromTarget), new THREE.Vector3(...toTarget), k)
-  controls.update()
-}
-function addPVCoral(data, revealAt, role) {
-  const c = addCoralFromData(data)
-  if (!c) return null
-  c.pvRevealAt = revealAt
-  c.pvRole = role
-  c.pvScale = data.pvScale ?? 1
-  c.fade = 0
-  c.fadeTarget = 0
-  c.grown = true
-  c.growStart = -100
-  pvCorals.push(c)
-  return c
-}
-function addPVCoralFromConfig(config) {
-  const data = captureData(
-    config.catIndex,
-    config.modelIndex,
-    config.position,
-    config.weight,
-    config.diversity,
-    config.recency,
-    config.trend,
-    config.rotationY,
-  )
-  data.pvScale = config.scale
-  const c = addPVCoral(data, config.revealAt, config.role)
-  if (c) {
-    c.pvConfig = config
-    c.group.position.set(...config.position)
-  }
-  return c
-}
-function maybeBuildPVScene() {
-  if (!pvMode || pvBuilt || modelsLoaded < MODEL_PATHS.length || !coralTemplate) return
-  pvBuilt = true
-  pvStart = null
+const PV_DEPTH_CURVE = [[0, 1.0], [4, 0.95], [8, 0.75], [13, 0.55], [16, 0.4], [20, 0.3], [26, 0.25]]
+const PV_CAM = [
+  { t: 0, pos: [0, 1.5, 8], tgt: [0, 0, 0] },
+  { t: 4, pos: [0, 0.6, 3.5], tgt: [0, 0, 0] },
+  { t: 8, pos: [0.5, 0.8, 3.0], tgt: [0, 0.1, 0] },
+  { t: 9, pos: [-1.5, 0.4, 3.0], tgt: [-2.2, -0.1, 0.5] },
+  { t: 12, pos: [-0.5, 0.8, 3.5], tgt: [0, 0, 0] },
+  { t: 13, pos: [1.2, 0.5, 2.8], tgt: [2.0, 0.1, -0.3] },
+  { t: 15.5, pos: [0, 1.0, 5.0], tgt: [0, 0, 0] },
+  { t: 18, pos: [0, 1.2, 6.5], tgt: [0, 0, 0] },
+  { t: 22, pos: [0, 1.25, 7.8], tgt: [0, 0, 0] },
+]
+
+function startPV() {
+  pvPlaying = true
+  pvElapsed = 0
+  pvCreatedCorals.forEach((c) => { reef.remove(c.group); const idx = corals.indexOf(c); if (idx >= 0) corals.splice(idx, 1) })
+  pvCreatedCorals.length = 0
+  pvCards.forEach((el) => el.remove())
+  pvCards.length = 0
+  clearIntroPreview()
+  setParam('depth', 1.0)
   controls.enableRotate = false
   controls.enablePan = false
   controls.enableZoom = false
-  scene.fog.density = 0.052
-
-  PV_CORAL_CONFIG.forEach(addPVCoralFromConfig)
-
-  rebuildConnections()
-  if (lineMesh) lineMesh.material.opacity = 0
-  reef.rotation.y = 0
-  setCam([0, 1.25, 7.8], [0, 0.05, 0])
-  window.__coralPVReady = true
-  refreshPVDirectorPanel()
 }
-function updatePVControlState() {
-  const pauseBtn = document.getElementById('pv-pause-btn')
-  if (pauseBtn) pauseBtn.textContent = pvPaused ? 'Play' : 'Pause'
+
+function stopPV() {
+  pvPlaying = false
+  controls.enableRotate = true
+  controls.enablePan = true
+  controls.enableZoom = true
+  // PV corals become intro preview corals
+  pvCreatedCorals.forEach((c) => { c.isIntroPreview = true; c.hideLabel = true; c.labelEl.style.display = 'none' })
+  introPreviewCorals = [...pvCreatedCorals]
+  pvCreatedCorals.length = 0
+  overviewTarget.set(0, 0, 0)
+  overviewPos.set(0, 1.25, 7.8)
 }
-function resetPVTimeline() {
-  pvStart = timer.getElapsed()
-  pvPaused = false
-  pvPausedAt = 0
-  pvCorals.forEach((c) => {
-    c.fade = 0
-    c.fadeTarget = 0
+
+function samplePVCurve(stops, t) {
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t <= stops[i + 1][0]) {
+      const k = (t - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
+      return stops[i][1] + (stops[i + 1][1] - stops[i][1]) * k
+    }
+  }
+  return stops[stops.length - 1][1]
+}
+
+function samplePVCam(t) {
+  for (let i = 0; i < PV_CAM.length - 1; i++) {
+    if (t <= PV_CAM[i + 1].t) {
+      const k = easeInOut((t - PV_CAM[i].t) / (PV_CAM[i + 1].t - PV_CAM[i].t))
+      return {
+        pos: PV_CAM[i].pos.map((v, j) => v + (PV_CAM[i + 1].pos[j] - v) * k),
+        tgt: PV_CAM[i].tgt.map((v, j) => v + (PV_CAM[i + 1].tgt[j] - v) * k),
+      }
+    }
+  }
+  const last = PV_CAM[PV_CAM.length - 1]
+  return { pos: last.pos, tgt: last.tgt }
+}
+
+function createPVCard(coral, cats) {
+  const card = officialUI?.createPVCard?.(cats)
+  if (card) { document.body.appendChild(card); pvCards.push(card) }
+  return card
+}
+
+function updatePV(dt) {
+  if (!pvPlaying) return
+  pvElapsed += dt
+
+  // Drive depth
+  setParam('depth', samplePVCurve(PV_DEPTH_CURVE, pvElapsed))
+
+  // Drive camera
+  const cam = samplePVCam(pvElapsed)
+  camera.position.set(...cam.pos)
+  controls.target.set(...cam.tgt)
+  camera.lookAt(...cam.tgt)
+
+  // Create corals at scheduled times
+  PV_SCHEDULE.forEach((sched, i) => {
+    if (pvElapsed >= sched.t && !pvCreatedCorals[i]) {
+      const shuffled = [...CATEGORIES].sort(() => Math.random() - 0.5)
+      const cats = shuffled.slice(0, 3)
+      const data = {
+        cat: cats[0], weight: 0.5 + Math.random() * 0.4,
+        count: 15 + Math.floor(Math.random() * 25), diversity: 4 + Math.floor(Math.random() * 6),
+        recency: 0.5 + Math.random() * 0.4, trend: (Math.random() - 0.5) * 0.3,
+        subcats: cats.map((cat, j) => ({ cat, weight: WEIGHTS[j] })),
+        position: sched.pos,
+      }
+      const coral = addCoralFromData(data)
+      if (coral) {
+        pvCreatedCorals[i] = coral
+        coral._pvCard = createPVCard(coral, cats)
+        coral._pvCardShowTime = pvElapsed
+      }
+    }
   })
-  if (lineMesh) lineMesh.material.opacity = 0
-  pvTitle.style.opacity = '0'
-  updatePVTitleSprite(0)
-  updatePVControlState()
-}
-function togglePVPause() {
-  if (!pvMode || Number.isFinite(pvSeek)) return
-  const now = timer.getElapsed()
-  if (pvStart === null) pvStart = now
-  if (pvPaused) {
-    pvStart = now - pvPausedAt
-    pvPaused = false
-  } else {
-    pvPausedAt = Math.max(0, now - pvStart)
-    pvPaused = true
-  }
-  updatePVControlState()
-}
-function updatePVTimeline(globalT) {
-  if (!pvMode || !pvBuilt) return
-  if (pvStart === null) pvStart = globalT
-  const t = Number.isFinite(pvSeek) ? pvSeek : (pvPaused ? pvPausedAt : globalT - pvStart)
-  const endFade = pvFadeIn(t, 22.5, 2.2)
-  const reefDim = 1 - endFade * 0.22
 
-  pvCorals.forEach((c) => {
-    let visible = pvFadeIn(t, c.pvRevealAt, c.pvRole === 'hero' ? 2.4 : 1.4)
-    if (c.pvRole === 'hero') visible = Math.max(visible, pvFadeIn(t, 8.5, 1.2))
-    c.fade = visible * reefDim
-    c.fadeTarget = c.fade
-    c.data.recency = Math.max(c.data.recency, 0.35 + visible * 0.55)
+  // Update card positions + fade
+  pvCreatedCorals.forEach((c) => {
+    if (!c || !c._pvCard) return
+    const age = pvElapsed - c._pvCardShowTime
+    const wp = c.group.getWorldPosition(new THREE.Vector3()).project(camera)
+    const x = (wp.x * 0.5 + 0.5) * window.innerWidth
+    const y = (-wp.y * 0.5 + 0.5) * window.innerHeight
+    c._pvCard.style.left = `${x + 60}px`
+    c._pvCard.style.top = `${y - 40}px`
+    // Float up + fade in for 2s, hold 2s, fade out 1s
+    if (age < 2) {
+      c._pvCard.style.opacity = String(age / 2)
+      c._pvCard.style.transform = `translateY(${20 - age * 10}px)`
+    } else if (age < 4) {
+      c._pvCard.style.opacity = '1'
+      c._pvCard.style.transform = 'translateY(0)'
+    } else if (age < 5) {
+      c._pvCard.style.opacity = String(1 - (age - 4))
+      c._pvCard.style.transform = `translateY(${-(age - 4) * 15}px)`
+    } else {
+      c._pvCard.style.opacity = '0'
+    }
   })
 
-  if (t < 3) {
-    setCam([0, 1.25, 7.8], [0, 0.05, 0])
-  } else if (t < 8) {
-    lerpCam(t, 3, 5, [0, 1.25, 7.8], [0, 0.95, 4.25], [0, 0.05, 0], [0, 0.15, 0])
-  } else if (t < 13) {
-    lerpCam(t, 8, 5, [0, 0.95, 4.25], [0.55, 0.62, 2.75], [0, 0.15, 0], [0.1, 0.15, 0])
-  } else if (t < 18) {
-    lerpCam(t, 13, 5, [0.55, 0.72, 3.15], [0, 1.35, 6.25], [0.1, 0.15, 0], [0, 0.08, 0])
-  } else if (t < 23) {
-    lerpCam(t, 18, 5, [0, 1.35, 6.25], [0, 1.85, 8.9], [0, 0.08, 0], [0, 0, 0])
-  } else {
-    setCam([0, 1.85, 8.9], [0, 0, 0])
-  }
+  // Slow reef rotation during PV
+  reef.rotation.y += dt * 0.03
 
-  if (lineMesh) {
-    const lineTarget = pvFadeIn(t, 17.5, 3) * pvFadeOut(t, 24.5, 1.5) * 0.18
-    lineMesh.material.opacity = lineTarget
+  // End PV at ~26s
+  if (pvElapsed >= 26) {
+    pvCards.forEach((el) => el.remove())
+    pvCards.length = 0
+    stopPV()
+    officialUI?.onPVEnd?.()
   }
-  pvTitle.style.opacity = String(endFade)
-  updatePVTitleSprite(endFade)
-  vignette.style.opacity = String(0.8 + endFade * 0.2)
-  reef.rotation.y = -0.05 + Math.sin(t * 0.08) * 0.025
 }
-window.__coralResetPVTimeline = resetPVTimeline
 
 function addCoralManual(cats) {
   const catIndices = cats.map((c) => CATEGORIES.indexOf(c.cat))
@@ -753,154 +728,6 @@ composer.addPass(new RenderPass(scene, camera))
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.65, 0.65, 0.42))
 composer.addPass(new OutputPass())
 
-const pvTitle = document.createElement('div')
-pvTitle.id = 'pv-title'
-pvTitle.innerHTML = '<span>CORALITHM</span><small>A living reef shaped by you.</small>'
-document.body.appendChild(pvTitle)
-
-const pvControlsEl = document.createElement('div')
-pvControlsEl.id = 'pv-controls'
-pvControlsEl.innerHTML = '<button id="pv-replay-btn">Replay</button><button id="pv-pause-btn">Pause</button><button id="pv-director-btn">Director</button><span>R replay / Space pause</span>'
-document.body.appendChild(pvControlsEl)
-pvControlsEl.querySelector('#pv-replay-btn').addEventListener('click', resetPVTimeline)
-pvControlsEl.querySelector('#pv-pause-btn').addEventListener('click', togglePVPause)
-pvControlsEl.querySelector('#pv-director-btn').addEventListener('click', () => {
-  document.body.classList.toggle('pv-director-open')
-  refreshPVDirectorPanel()
-})
-window.addEventListener('keydown', (e) => {
-  if (!pvMode || Number.isFinite(pvSeek)) return
-  if (e.key.toLowerCase() === 'r') resetPVTimeline()
-  if (e.code === 'Space') {
-    e.preventDefault()
-    togglePVPause()
-  }
-})
-
-const pvDirectorEl = document.createElement('div')
-pvDirectorEl.id = 'pv-director'
-pvDirectorEl.innerHTML =
-  '<h3>PV Director</h3>' +
-  '<label>Coral<select id="pv-coral-select"></select></label>' +
-  '<div class="pv-director-grid">' +
-  '<label>X<input id="pv-x" type="range" min="-4.5" max="4.5" step="0.05"></label>' +
-  '<label>Y<input id="pv-y" type="range" min="-2" max="2" step="0.05"></label>' +
-  '<label>Z<input id="pv-z" type="range" min="-2.5" max="2.5" step="0.05"></label>' +
-  '<label>Scale<input id="pv-scale" type="range" min="0.45" max="1.8" step="0.01"></label>' +
-  '<label>Reveal<input id="pv-reveal" type="range" min="0" max="24" step="0.1"></label>' +
-  '<label>Rotate<input id="pv-rotate" type="range" min="-3.14" max="3.14" step="0.01"></label>' +
-  '</div>' +
-  '<div id="pv-values"></div>' +
-  '<div class="pv-director-actions">' +
-  '<button id="pv-focus-btn">Jump to reveal</button>' +
-  '<button id="pv-copy-btn">Copy config</button>' +
-  '</div>' +
-  '<textarea id="pv-config-out" readonly></textarea>'
-document.body.appendChild(pvDirectorEl)
-let pvDirectorSelected = PV_CORAL_CONFIG[0]?.id || ''
-
-function selectedPVConfig() {
-  return PV_CORAL_CONFIG.find((c) => c.id === pvDirectorSelected) || PV_CORAL_CONFIG[0]
-}
-function selectedPVCoral() {
-  const cfg = selectedPVConfig()
-  return pvCorals.find((c) => c.pvConfig === cfg)
-}
-function formatPVConfig() {
-  return JSON.stringify(PV_CORAL_CONFIG.map((cfg) => ({
-    id: cfg.id,
-    position: cfg.position.map((v) => Number(v.toFixed(2))),
-    scale: Number(cfg.scale.toFixed(2)),
-    revealAt: Number(cfg.revealAt.toFixed(1)),
-    rotationY: Number(cfg.rotationY.toFixed(2)),
-  })), null, 2)
-}
-function updatePVDirectorValues() {
-  const cfg = selectedPVConfig()
-  const values = document.getElementById('pv-values')
-  const out = document.getElementById('pv-config-out')
-  if (values) {
-    values.textContent = `pos ${cfg.position.map((v) => v.toFixed(2)).join(', ')} | scale ${cfg.scale.toFixed(2)} | reveal ${cfg.revealAt.toFixed(1)}s | rot ${cfg.rotationY.toFixed(2)}`
-  }
-  if (out) out.value = formatPVConfig()
-}
-function setPVInputValue(id, value) {
-  const el = document.getElementById(id)
-  if (el) el.value = String(value)
-}
-function syncPVDirectorInputs() {
-  const cfg = selectedPVConfig()
-  if (!cfg) return
-  setPVInputValue('pv-x', cfg.position[0])
-  setPVInputValue('pv-y', cfg.position[1])
-  setPVInputValue('pv-z', cfg.position[2])
-  setPVInputValue('pv-scale', cfg.scale)
-  setPVInputValue('pv-reveal', cfg.revealAt)
-  setPVInputValue('pv-rotate', cfg.rotationY)
-  updatePVDirectorValues()
-}
-function refreshPVDirectorPanel() {
-  const select = document.getElementById('pv-coral-select')
-  if (!select) return
-  if (select.options.length !== PV_CORAL_CONFIG.length) {
-    select.innerHTML = ''
-    PV_CORAL_CONFIG.forEach((cfg) => {
-      const opt = document.createElement('option')
-      opt.value = cfg.id
-      opt.textContent = cfg.label
-      select.appendChild(opt)
-    })
-  }
-  select.value = pvDirectorSelected
-  syncPVDirectorInputs()
-}
-function applyPVDirectorChange() {
-  const cfg = selectedPVConfig()
-  if (!cfg) return
-  cfg.position = [
-    Number(document.getElementById('pv-x').value),
-    Number(document.getElementById('pv-y').value),
-    Number(document.getElementById('pv-z').value),
-  ]
-  cfg.scale = Number(document.getElementById('pv-scale').value)
-  cfg.revealAt = Number(document.getElementById('pv-reveal').value)
-  cfg.rotationY = Number(document.getElementById('pv-rotate').value)
-
-  const c = selectedPVCoral()
-  if (c) {
-    c.group.position.set(...cfg.position)
-    c.group.rotation.y = cfg.rotationY
-    c.pvScale = cfg.scale
-    c.pvRevealAt = cfg.revealAt
-    rebuildConnections()
-    if (lineMesh) lineMesh.material.opacity = 0
-  }
-  updatePVDirectorValues()
-}
-function jumpToSelectedReveal() {
-  const cfg = selectedPVConfig()
-  if (!cfg || !pvMode || Number.isFinite(pvSeek)) return
-  pvPaused = true
-  pvPausedAt = Math.max(0, cfg.revealAt + 1)
-  pvStart = timer.getElapsed() - pvPausedAt
-  updatePVControlState()
-}
-function copyPVDirectorConfig() {
-  const out = document.getElementById('pv-config-out')
-  if (!out) return
-  out.select()
-  navigator.clipboard?.writeText(out.value).catch(() => {})
-}
-pvDirectorEl.querySelector('#pv-coral-select').addEventListener('change', (e) => {
-  pvDirectorSelected = e.target.value
-  syncPVDirectorInputs()
-})
-;['pv-x', 'pv-y', 'pv-z', 'pv-scale', 'pv-reveal', 'pv-rotate'].forEach((id) => {
-  pvDirectorEl.querySelector(`#${id}`).addEventListener('input', applyPVDirectorChange)
-})
-pvDirectorEl.querySelector('#pv-focus-btn').addEventListener('click', jumpToSelectedReveal)
-pvDirectorEl.querySelector('#pv-copy-btn').addEventListener('click', copyPVDirectorConfig)
-refreshPVDirectorPanel()
 
 const vignette = document.createElement('div')
 vignette.id = 'vignette'
@@ -993,7 +820,7 @@ renderer.domElement.addEventListener('pointerdown', (e) => {
   pointerStart = { x: e.clientX, y: e.clientY, t: performance.now(), camPos: camera.position.clone(), camTarget: controls.target.clone() }
 
   // Detect coral hit for drag-on-coral
-  if (officialMode && !focused && !captureMode && !pvMode) {
+  if (officialMode && !focused && !captureMode) {
     const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
     raycaster.setFromCamera(ndc, camera)
     const groups = corals.filter((c) => !c.removing && !c.isIntroPreview).map((c) => c.group)
@@ -1052,7 +879,7 @@ window.addEventListener('pointermove', (e) => {
 
 // Double-click void → generate new coral
 renderer.domElement.addEventListener('dblclick', (e) => {
-  if (!officialMode || focused || captureMode || pvMode) return
+  if (!officialMode || focused || captureMode) return
   if (!coralTemplate || modelsLoaded < MODEL_PATHS.length) return
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1)
   raycaster.setFromCamera(ndc, camera)
@@ -1126,6 +953,8 @@ if (officialMode) {
     focusCoral: (coral) => focusCluster(coral, false),
     showOverview: () => resetView(false),
     seedIntro: seedIntroPreview,
+    startPV,
+    pvAutoStart,
     modelsReady: () => modelsLoaded >= MODEL_PATHS.length && Boolean(coralTemplate),
   })
   if (modelsLoaded >= MODEL_PATHS.length) officialUI.onModelsReady()
@@ -1136,7 +965,7 @@ renderer.setAnimationLoop((time) => {
   const dt = Math.min(timer.getDelta(), 0.05)
   const t = timer.getElapsed()
 
-  if (!focused && !camTween && !pvMode) reef.rotation.y += dt * 0.06
+  if (!focused && !camTween) reef.rotation.y += dt * 0.06
 
   for (let ci = corals.length - 1; ci >= 0; ci--) {
     const c = corals[ci]
@@ -1293,9 +1122,12 @@ renderer.setAnimationLoop((time) => {
   // HUD update (~1 per second)
   if (officialMode && Math.floor(t) !== Math.floor(t - dt)) updateHUD()
 
-  if (camTween) updateCamTween()
+  updatePV(dt)
+
+  if (pvPlaying) { /* PV drives camera directly */ }
+  else if (camTween) updateCamTween()
   else controls.update()
-  updatePVTimeline(t)
+
   composer.render()
   labelRenderer.render(scene, camera)
 })

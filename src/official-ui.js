@@ -268,6 +268,7 @@ export function createOfficialUI(api) {
           </p>
           <button class="primary-action intro-start" type="button">시작하기</button>
         </div>
+        <button class="pv-btn" type="button">PV</button>
         <span class="intro-hint">취향이 머무는 곳에서 산호가 자라납니다</span>
       </section>
 
@@ -626,6 +627,12 @@ export function createOfficialUI(api) {
   }
 
   root.querySelector('.intro-start').addEventListener('click', () => openSelection(false))
+  root.querySelector('.pv-btn').addEventListener('click', () => {
+    root.querySelector('.intro-copy').style.opacity = '0'
+    root.querySelector('.intro-hint').style.opacity = '0'
+    root.querySelector('.pv-btn').style.opacity = '0'
+    api.startPV()
+  })
   root.querySelector('.selection-cancel').addEventListener('click', () => {
     if (addMode && api.getCorals().length) {
       api.showOverview()
@@ -724,6 +731,11 @@ export function createOfficialUI(api) {
       loadProgress = { loaded: loadProgress.total, total: loadProgress.total }
       renderSelection()
       api.seedIntro()
+      if (api.pvAutoStart) {
+        window.setTimeout(() => {
+          root.querySelector('.pv-btn').click()
+        }, 500)
+      }
     },
     onCoralFocused(coral) {
       if (view === 'intro' || view === 'select') return
@@ -732,6 +744,34 @@ export function createOfficialUI(api) {
     onOverview() {
       if (view === 'intro' || view === 'select') return
       setView('overview')
+    },
+    createPVCard(cats) {
+      const card = document.createElement('div')
+      card.className = 'pv-card'
+      const catName = api.categories.find((c) => c.cat === cats[0])?.label || cats[0].name
+      const lib = SPECIFIC_CONTENT_LIBRARY[cats[0].name] || []
+      const items = lib.sort(() => Math.random() - 0.5).slice(0, 2)
+      card.innerHTML = `<span class="pv-card-name">${catName}</span>` +
+        `<div class="pv-card-imgs">${items.map((it) => `<img src="${it.image}" alt="">`).join('')}</div>`
+      card.style.opacity = '0'
+      return card
+    },
+    onPVEnd() {
+      // PV ended — fade intro UI back in (float-up animation)
+      const copy = root.querySelector('.intro-copy')
+      const hint = root.querySelector('.intro-hint')
+      const pvBtn = root.querySelector('.pv-btn')
+      copy.style.transition = 'opacity 1.5s, transform 1.5s'
+      copy.style.transform = 'translateY(20px)'
+      hint.style.transition = 'opacity 2s 0.5s'
+      pvBtn.style.transition = 'opacity 1.5s 1s'
+      requestAnimationFrame(() => {
+        copy.style.opacity = '1'
+        copy.style.transform = 'translateY(0)'
+        hint.style.opacity = '1'
+        pvBtn.style.opacity = '1'
+      })
+      setView('intro')
     },
   }
 }
