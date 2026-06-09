@@ -628,7 +628,11 @@ export function createOfficialUI(api) {
 
   root.querySelector('.intro-start').addEventListener('click', () => openSelection(false))
   root.querySelector('.pv-btn').addEventListener('click', () => {
-    root.querySelector('.intro-copy').style.opacity = '0'
+    // Hide content individually but keep intro screen active
+    root.querySelector('.intro-kicker').style.opacity = '0'
+    root.querySelector('.intro-copy h1').style.opacity = '0'
+    root.querySelector('.intro-description').style.opacity = '0'
+    root.querySelector('.intro-start').style.opacity = '0'
     root.querySelector('.intro-hint').style.opacity = '0'
     root.querySelector('.pv-btn').style.opacity = '0'
     api.startPV()
@@ -757,26 +761,35 @@ export function createOfficialUI(api) {
       return card
     },
     onPVEnd() {
-      // PV ended — each line floats up one by one, top to bottom
       const kicker = root.querySelector('.intro-kicker')
       const title = root.querySelector('.intro-copy h1')
       const desc = root.querySelector('.intro-description')
       const startBtn = root.querySelector('.intro-start')
       const hint = root.querySelector('.intro-hint')
       const pvBtn = root.querySelector('.pv-btn')
-      const items = [kicker, title, desc, startBtn, hint]
-      items.forEach((el) => { el.style.opacity = '0'; el.style.transform = 'translateY(25px)' })
-      pvBtn.style.opacity = '0'
-      root.querySelector('.intro-copy').style.opacity = '1'
-      setView('intro')
-      items.forEach((el, i) => {
-        el.style.transition = `opacity 1.2s ${i * 0.6}s, transform 1.2s ${i * 0.6}s`
+
+      // Hint appears immediately (already centered via translateX(-50%))
+      hint.style.transition = 'opacity 1s'
+      hint.style.opacity = '1'
+
+      // Stagger: "Start your exploration with" → "Coralithm" → description → 시작하기
+      const stagger = [
+        { el: kicker, delay: 0.5 },
+        { el: title, delay: 1.2 },
+        { el: desc, delay: 2.0 },
+        { el: startBtn, delay: 2.8 },
+      ]
+      stagger.forEach(({ el, delay }) => {
+        el.style.opacity = '0'
+        el.style.transform = 'translateY(20px)'
+        el.style.transition = `opacity 1.2s ${delay}s, transform 1.2s ${delay}s`
         requestAnimationFrame(() => requestAnimationFrame(() => {
           el.style.opacity = '1'
           el.style.transform = 'translateY(0)'
         }))
       })
-      pvBtn.style.transition = 'opacity 1s 3.5s'
+
+      pvBtn.style.transition = 'opacity 1s 4s'
       requestAnimationFrame(() => requestAnimationFrame(() => { pvBtn.style.opacity = '1' }))
     },
   }

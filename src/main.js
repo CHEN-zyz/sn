@@ -524,6 +524,13 @@ function updatePV(dt) {
     }
   })
 
+  // After all corals appear (18s), accelerating rotation for 8s → exactly one full turn back to front
+  if (pvElapsed > 18) {
+    const rt = pvElapsed - 18  // seconds since rotation started
+    // θ = ½at², a = 2π / (½ * 8²) = π/16
+    reef.rotation.y = (Math.PI / 16) * rt * rt  // accelerating, reaches 2π at t=8
+  }
+
   // End PV at ~26s
   if (pvElapsed >= 26) {
     pvCards.forEach((el) => el.remove())
