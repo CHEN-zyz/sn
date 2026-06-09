@@ -115,8 +115,8 @@ labelRenderer.domElement.style.pointerEvents = 'none'
 document.body.appendChild(labelRenderer.domElement)
 
 const scene = new THREE.Scene()
-scene.background = new THREE.Color(0x000000)
-scene.fog = new THREE.FogExp2(0x010509, 0.04)
+scene.background = new THREE.Color(0x0c1838)
+scene.fog = new THREE.FogExp2(0x0c1838, 0.045)
 
 const pmrem = new THREE.PMREMGenerator(renderer)
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture

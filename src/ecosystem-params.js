@@ -3,8 +3,8 @@
 
 export const params = {
   // Scene atmosphere
-  bgColor: 0x04081a,
-  fogColor: 0x04081a,
+  bgColor: 0x0c1838,
+  fogColor: 0x0c1838,
   fogDensity: 0.045,
   bloomStrength: 0.65,
   toneMappingExposure: 0.85,
@@ -53,44 +53,44 @@ export function applyPreset(preset) {
 }
 
 export const PRESETS = {
-  // Visibly blue deep water, balanced
+  // Visibly blue underwater
   '기본': {
-    bgColor: 0x04081a, fogColor: 0x04081a, fogDensity: 0.045,
-    bloomStrength: 0.65, toneMappingExposure: 0.85,
-    hemiSkyColor: 0x2a4a6a, hemiGroundColor: 0x05080d, hemiIntensity: 0.35,
+    bgColor: 0x0c1838, fogColor: 0x0c1838, fogDensity: 0.045,
+    bloomStrength: 0.65, toneMappingExposure: 0.9,
+    hemiSkyColor: 0x2a4a6a, hemiGroundColor: 0x0a1020, hemiIntensity: 0.35,
     keyLightColor: 0xbfe0ff, keyLightIntensity: 0.8,
     fillLightColor: 0x4488cc, fillLightIntensity: 0.3,
     particleColor: 0x5ad0ff, particleSize: 0.045, particleOpacity: 0.62,
     shaftOpacity: 0.05,
     growthSpeed: 1.0, glowIntensity: 1.0,
   },
-  // Almost no light, deep blue-black, corals barely visible, slow growth
+  // Deep blue abyss, corals barely visible
   '심해': {
-    bgColor: 0x020510, fogColor: 0x020510, fogDensity: 0.09,
-    bloomStrength: 0.2, toneMappingExposure: 0.35,
-    hemiSkyColor: 0x081020, hemiGroundColor: 0x020408, hemiIntensity: 0.12,
-    keyLightColor: 0x1a3366, keyLightIntensity: 0.25,
-    fillLightColor: 0x0a1a33, fillLightIntensity: 0.1,
-    particleColor: 0x1a3355, particleSize: 0.025, particleOpacity: 0.2,
+    bgColor: 0x061028, fogColor: 0x061028, fogDensity: 0.08,
+    bloomStrength: 0.2, toneMappingExposure: 0.5,
+    hemiSkyColor: 0x102040, hemiGroundColor: 0x040810, hemiIntensity: 0.15,
+    keyLightColor: 0x2244aa, keyLightIntensity: 0.35,
+    fillLightColor: 0x102244, fillLightIntensity: 0.12,
+    particleColor: 0x2244aa, particleSize: 0.03, particleOpacity: 0.25,
     shaftOpacity: 0.01,
-    growthSpeed: 0.4, glowIntensity: 0.25,
+    growthSpeed: 0.4, glowIntensity: 0.3,
   },
-  // Dark green sea, corals self-glow brightly but bloom controlled (shape stays clear)
+  // Dark green sea, corals self-glow (controlled bloom, shape visible)
   '생물발광': {
-    bgColor: 0x041a0e, fogColor: 0x041a0e, fogDensity: 0.05,
-    bloomStrength: 0.85, toneMappingExposure: 0.75,
-    hemiSkyColor: 0x0a3020, hemiGroundColor: 0x041008, hemiIntensity: 0.2,
-    keyLightColor: 0x33aa66, keyLightIntensity: 0.4,
+    bgColor: 0x0a2818, fogColor: 0x0a2818, fogDensity: 0.045,
+    bloomStrength: 0.85, toneMappingExposure: 0.8,
+    hemiSkyColor: 0x154030, hemiGroundColor: 0x081810, hemiIntensity: 0.22,
+    keyLightColor: 0x33aa66, keyLightIntensity: 0.45,
     fillLightColor: 0x1a6640, fillLightIntensity: 0.25,
     particleColor: 0x33ff88, particleSize: 0.05, particleOpacity: 0.7,
     shaftOpacity: 0.03,
     growthSpeed: 0.8, glowIntensity: 2.5,
   },
-  // Warm shallow water, bright, fast coral growth
+  // Warm bright shallow water, fast growth
   '급성장': {
-    bgColor: 0x0c2030, fogColor: 0x0c2030, fogDensity: 0.03,
+    bgColor: 0x142838, fogColor: 0x142838, fogDensity: 0.03,
     bloomStrength: 0.5, toneMappingExposure: 1.3,
-    hemiSkyColor: 0x4488aa, hemiGroundColor: 0x183040, hemiIntensity: 0.55,
+    hemiSkyColor: 0x4488aa, hemiGroundColor: 0x1a3040, hemiIntensity: 0.55,
     keyLightColor: 0xffeedd, keyLightIntensity: 1.3,
     fillLightColor: 0x66aacc, fillLightIntensity: 0.5,
     particleColor: 0x88ccee, particleSize: 0.04, particleOpacity: 0.5,
