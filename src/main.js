@@ -115,8 +115,24 @@ labelRenderer.domElement.style.pointerEvents = 'none'
 document.body.appendChild(labelRenderer.domElement)
 
 const scene = new THREE.Scene()
-scene.background = new THREE.Color(0x0c1838)
-scene.fog = new THREE.FogExp2(0x0c1838, 0.045)
+// Underwater gradient background: lighter at top (surface), darker at bottom (abyss)
+const bgCanvas = document.createElement('canvas')
+bgCanvas.width = 2; bgCanvas.height = 512
+const bgCtx = bgCanvas.getContext('2d')
+function drawBgGradient(topHex, midHex, bottomHex) {
+  const g = bgCtx.createLinearGradient(0, 0, 0, 512)
+  g.addColorStop(0, topHex)
+  g.addColorStop(0.5, midHex)
+  g.addColorStop(1, bottomHex)
+  bgCtx.fillStyle = g
+  bgCtx.fillRect(0, 0, 2, 512)
+  if (bgTexture) bgTexture.needsUpdate = true
+}
+drawBgGradient('#1a3055', '#0c1830', '#040810')
+const bgTexture = new THREE.CanvasTexture(bgCanvas)
+bgTexture.colorSpace = THREE.SRGBColorSpace
+scene.background = bgTexture
+scene.fog = new THREE.FogExp2(0x0c1830, 0.045)
 
 const pmrem = new THREE.PMREMGenerator(renderer)
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
@@ -1191,7 +1207,7 @@ renderer.setAnimationLoop((time) => {
   shafts.forEach((s, i) => { s.material.opacity = params.shaftOpacity * (0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
 
   // Apply scene-level params every frame (presets change these)
-  scene.background.setHex(params.bgColor)
+  drawBgGradient(params.bgTop, params.bgMid, params.bgBottom)
   scene.fog.color.setHex(params.fogColor)
   scene.fog.density = params.fogDensity
   renderer.toneMappingExposure = params.toneMappingExposure

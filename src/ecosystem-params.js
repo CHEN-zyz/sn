@@ -3,8 +3,10 @@
 
 export const params = {
   // Scene atmosphere
-  bgColor: 0x0c1838,
-  fogColor: 0x0c1838,
+  bgTop: '#1a3055',
+  bgMid: '#0c1830',
+  bgBottom: '#040810',
+  fogColor: 0x0c1830,
   fogDensity: 0.045,
   bloomStrength: 0.65,
   toneMappingExposure: 0.85,
@@ -53,9 +55,10 @@ export function applyPreset(preset) {
 }
 
 export const PRESETS = {
-  // Visibly blue underwater
+  // Blue underwater — visible blue gradient
   '기본': {
-    bgColor: 0x0c1838, fogColor: 0x0c1838, fogDensity: 0.045,
+    bgTop: '#1a3055', bgMid: '#0c1830', bgBottom: '#040810',
+    fogColor: 0x0c1830, fogDensity: 0.045,
     bloomStrength: 0.65, toneMappingExposure: 0.9,
     hemiSkyColor: 0x2a4a6a, hemiGroundColor: 0x0a1020, hemiIntensity: 0.35,
     keyLightColor: 0xbfe0ff, keyLightIntensity: 0.8,
@@ -64,9 +67,10 @@ export const PRESETS = {
     shaftOpacity: 0.05,
     growthSpeed: 1.0, glowIntensity: 1.0,
   },
-  // Deep blue abyss, corals barely visible
+  // Deep abyss — very dark blue, corals barely visible
   '심해': {
-    bgColor: 0x061028, fogColor: 0x061028, fogDensity: 0.08,
+    bgTop: '#0a1830', bgMid: '#050c1a', bgBottom: '#020408',
+    fogColor: 0x050c1a, fogDensity: 0.08,
     bloomStrength: 0.2, toneMappingExposure: 0.5,
     hemiSkyColor: 0x102040, hemiGroundColor: 0x040810, hemiIntensity: 0.15,
     keyLightColor: 0x2244aa, keyLightIntensity: 0.35,
@@ -75,9 +79,10 @@ export const PRESETS = {
     shaftOpacity: 0.01,
     growthSpeed: 0.4, glowIntensity: 0.3,
   },
-  // Dark green sea, corals self-glow (controlled bloom, shape visible)
+  // Green sea — bioluminescent glow, dark green water
   '생물발광': {
-    bgColor: 0x0a2818, fogColor: 0x0a2818, fogDensity: 0.045,
+    bgTop: '#0a3020', bgMid: '#061a10', bgBottom: '#020a06',
+    fogColor: 0x061a10, fogDensity: 0.045,
     bloomStrength: 0.85, toneMappingExposure: 0.8,
     hemiSkyColor: 0x154030, hemiGroundColor: 0x081810, hemiIntensity: 0.22,
     keyLightColor: 0x33aa66, keyLightIntensity: 0.45,
@@ -86,9 +91,10 @@ export const PRESETS = {
     shaftOpacity: 0.03,
     growthSpeed: 0.8, glowIntensity: 2.5,
   },
-  // Warm bright shallow water, fast growth
+  // Shallow warm water — bright, lots of light from surface
   '급성장': {
-    bgColor: 0x142838, fogColor: 0x142838, fogDensity: 0.03,
+    bgTop: '#2a5070', bgMid: '#142838', bgBottom: '#0a1820',
+    fogColor: 0x142838, fogDensity: 0.03,
     bloomStrength: 0.5, toneMappingExposure: 1.3,
     hemiSkyColor: 0x4488aa, hemiGroundColor: 0x1a3040, hemiIntensity: 0.55,
     keyLightColor: 0xffeedd, keyLightIntensity: 1.3,
@@ -101,11 +107,7 @@ export const PRESETS = {
 
 export const EVOLUTION_THRESHOLD = 1.5
 
-// Sliders: scene atmosphere only (coral behavior is preset-driven, no manual slider)
+// User-facing sliders: intuitive controls, not technical params
 export const PARAM_DEFS = [
-  { key: 'bloomStrength', label: '블룸 강도', min: 0.1, max: 2.0, step: 0.05 },
-  { key: 'fogDensity', label: '안개 농도', min: 0.01, max: 0.12, step: 0.005 },
-  { key: 'toneMappingExposure', label: '밝기', min: 0.2, max: 1.5, step: 0.05 },
-  { key: 'particleOpacity', label: '입자 밝기', min: 0.1, max: 1.0, step: 0.05 },
-  { key: 'shaftOpacity', label: '빛줄기', min: 0, max: 0.25, step: 0.01 },
+  { key: 'toneMappingExposure', label: '밝기', min: 0.3, max: 1.5, step: 0.05 },
 ]
