@@ -24,7 +24,7 @@ export const params = {
 
   // Coral behavior (set by presets, no slider)
   growthSpeed: 1.0,
-  glowIntensity: 1.0,
+  glowIntensity: 0.4,
 
   // Mouse (fixed, not in presets)
   mouseSwayStrength: 1.0,
@@ -65,7 +65,7 @@ export const PRESETS = {
     fillLightColor: 0x4488cc, fillLightIntensity: 0.3,
     particleColor: 0x5ad0ff, particleSize: 0.045, particleOpacity: 0.62,
     shaftOpacity: 0.06,
-    growthSpeed: 1.0, glowIntensity: 1.0,
+    growthSpeed: 1.0, glowIntensity: 0.4,
   },
   // Deep abyss — dark blue, dim corals, barely any light
   '심해': {
@@ -77,7 +77,7 @@ export const PRESETS = {
     fillLightColor: 0x102244, fillLightIntensity: 0.15,
     particleColor: 0x2255aa, particleSize: 0.03, particleOpacity: 0.3,
     shaftOpacity: 0.015,
-    growthSpeed: 0.4, glowIntensity: 0.3,
+    growthSpeed: 0.4, glowIntensity: 0.15,
   },
   // Green sea — visible green water, corals self-glow
   '생물발광': {
@@ -101,7 +101,7 @@ export const PRESETS = {
     fillLightColor: 0x66aacc, fillLightIntensity: 0.5,
     particleColor: 0x88ccee, particleSize: 0.04, particleOpacity: 0.55,
     shaftOpacity: 0.22,
-    growthSpeed: 2.5, glowIntensity: 1.2,
+    growthSpeed: 2.5, glowIntensity: 0.5,
   },
 }
 
