@@ -126,11 +126,14 @@ pmrem.dispose()
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100)
 camera.position.set(0, 2, 8)
 
-scene.add(new THREE.HemisphereLight(0x2a4a6a, 0x05080d, 0.35))
+const hemiLight = new THREE.HemisphereLight(0x2a4a6a, 0x05080d, 0.35)
+scene.add(hemiLight)
 const keyLight = new THREE.DirectionalLight(0xbfe0ff, 0.8)
 keyLight.position.set(3, 8, 5)
 scene.add(keyLight)
-scene.add(new THREE.DirectionalLight(0x4488cc, 0.3).translateX(-4).translateY(2).translateZ(-3))
+const fillLight = new THREE.DirectionalLight(0x4488cc, 0.3)
+fillLight.position.set(-4, 2, -3)
+scene.add(fillLight)
 
 const controls = new OrbitControls(camera, renderer.domElement)
 controls.enableDamping = true
@@ -1187,9 +1190,18 @@ renderer.setAnimationLoop((time) => {
   snowGeo.attributes.position.needsUpdate = true
   shafts.forEach((s, i) => { s.material.opacity = params.shaftOpacity * (0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
 
-  // Apply scene-level params every frame
+  // Apply scene-level params every frame (presets change these)
+  scene.background.setHex(params.bgColor)
+  scene.fog.color.setHex(params.fogColor)
   scene.fog.density = params.fogDensity
   renderer.toneMappingExposure = params.toneMappingExposure
+  hemiLight.color.setHex(params.hemiSkyColor)
+  hemiLight.groundColor.setHex(params.hemiGroundColor)
+  hemiLight.intensity = params.hemiIntensity
+  keyLight.color.setHex(params.keyLightColor)
+  keyLight.intensity = params.keyLightIntensity
+  fillLight.color.setHex(params.fillLightColor)
+  fillLight.intensity = params.fillLightIntensity
   flowMat.color.setHex(params.particleColor)
   flowMat.size = params.particleSize
   flowMat.opacity = params.particleOpacity
