@@ -1154,15 +1154,21 @@ renderer.setAnimationLoop((time) => {
     )
     if (!focused) c.group.rotation.y += c.spinSpeed * dt
 
-    // Mouse proximity → coral sway (screen-space distance for reliable detection)
+    // Mouse proximity → coral sway: compute target angle, lerp toward it, spring back to neutral
     if (officialMode && !focused) {
+      if (c._baseRotZ === undefined) { c._baseRotZ = c.group.rotation.z; c._baseRotX = c.group.rotation.x }
       const wp = c.group.getWorldPosition(new THREE.Vector3()).project(camera)
       const screenDist = Math.hypot(wp.x - mouseNDC.x, wp.y - mouseNDC.y)
-      if (screenDist < 0.6) {
-        const inf = 1 - screenDist / 0.6
-        c.group.rotation.z += (mouseNDC.x - wp.x) * inf * params.mouseSwayStrength * dt * 4
-        c.group.rotation.x -= (mouseNDC.y - wp.y) * inf * params.mouseSwayStrength * dt * 4
+      let tgtZ = 0, tgtX = 0
+      if (screenDist < 0.8) {
+        const inf = 1 - screenDist / 0.8
+        tgtZ = (mouseNDC.x - wp.x) * inf * params.mouseSwayStrength
+        tgtX = -(mouseNDC.y - wp.y) * inf * params.mouseSwayStrength
       }
+      c._swayZ = (c._swayZ || 0) + (tgtZ - (c._swayZ || 0)) * 0.08
+      c._swayX = (c._swayX || 0) + (tgtX - (c._swayX || 0)) * 0.08
+      c.group.rotation.z = c._baseRotZ + c._swayZ
+      c.group.rotation.x = c._baseRotX + c._swayX
     }
 
     const d = camera.position.distanceTo(c.group.getWorldPosition(_v))
