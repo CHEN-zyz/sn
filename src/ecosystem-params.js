@@ -45,7 +45,7 @@ export function applyPreset(preset) {
 // Lighting palette determines the tint/mood on top of the depth-derived base
 export const PRESETS = {
   '기본': {
-    brightness: 0.9, depth: 0.35, activity: 0.5,
+    brightness: 0.9, depth: 0.3, activity: 0.5,
     hemiSkyColor: 0x4080a0, hemiGroundColor: 0x0a1020,
     keyLightColor: 0xbfe0ff, fillLightColor: 0x4488cc,
     particleColor: 0x5ad0ff, particleSize: 0.045, particleBaseOpacity: 0.62,
@@ -57,7 +57,7 @@ export const PRESETS = {
     particleColor: 0x2255aa, particleSize: 0.03, particleBaseOpacity: 0.3,
   },
   '생물발광': {
-    brightness: 0.85, depth: 0.6, activity: 0.85,
+    brightness: 0.85, depth: 0.15, activity: 0.85,
     hemiSkyColor: 0x1a5040, hemiGroundColor: 0x081a10,
     keyLightColor: 0x33bb66, fillLightColor: 0x1a7744,
     particleColor: 0x33ff88, particleSize: 0.055, particleBaseOpacity: 0.75,
