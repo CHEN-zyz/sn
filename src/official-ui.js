@@ -757,21 +757,27 @@ export function createOfficialUI(api) {
       return card
     },
     onPVEnd() {
-      // PV ended — fade intro UI back in (float-up animation)
-      const copy = root.querySelector('.intro-copy')
+      // PV ended — each line floats up one by one, top to bottom
+      const kicker = root.querySelector('.intro-kicker')
+      const title = root.querySelector('.intro-copy h1')
+      const desc = root.querySelector('.intro-description')
+      const startBtn = root.querySelector('.intro-start')
       const hint = root.querySelector('.intro-hint')
       const pvBtn = root.querySelector('.pv-btn')
-      copy.style.transition = 'opacity 1.5s, transform 1.5s'
-      copy.style.transform = 'translateY(20px)'
-      hint.style.transition = 'opacity 2s 0.5s'
-      pvBtn.style.transition = 'opacity 1.5s 1s'
-      requestAnimationFrame(() => {
-        copy.style.opacity = '1'
-        copy.style.transform = 'translateY(0)'
-        hint.style.opacity = '1'
-        pvBtn.style.opacity = '1'
-      })
+      const items = [kicker, title, desc, startBtn, hint]
+      items.forEach((el) => { el.style.opacity = '0'; el.style.transform = 'translateY(25px)' })
+      pvBtn.style.opacity = '0'
+      root.querySelector('.intro-copy').style.opacity = '1'
       setView('intro')
+      items.forEach((el, i) => {
+        el.style.transition = `opacity 1.2s ${i * 0.6}s, transform 1.2s ${i * 0.6}s`
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          el.style.opacity = '1'
+          el.style.transform = 'translateY(0)'
+        }))
+      })
+      pvBtn.style.transition = 'opacity 1s 3.5s'
+      requestAnimationFrame(() => requestAnimationFrame(() => { pvBtn.style.opacity = '1' }))
     },
   }
 }
