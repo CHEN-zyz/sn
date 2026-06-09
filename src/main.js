@@ -1152,7 +1152,8 @@ renderer.setAnimationLoop((time) => {
 
     let growK = 1
     const ge = t - c.growStart
-    const effectiveGrowDur = GROW_DUR / params.growthSpeed
+    const growSpeed = 0.3 + params.activity * 2.7
+    const effectiveGrowDur = GROW_DUR / growSpeed
     if (ge < effectiveGrowDur) growK = easeOutBack(clamp(ge / effectiveGrowDur, 0, 1))
     else if (!c.grown) c.grown = true
 
@@ -1160,7 +1161,8 @@ renderer.setAnimationLoop((time) => {
     const isHovered = (c === hovered && !focused) ? 1 : 0
     const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
-      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1) * params.glowIntensity
+      const glowFromActivity = 0.15 + params.activity * 0.85
+      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1) * glowFromActivity
       m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6) * (c.data.captureOpacity ?? 1), 0.02, 1)
     }
     const scaleFade = 0.7 + 0.3 * c.fade
@@ -1204,24 +1206,51 @@ renderer.setAnimationLoop((time) => {
   updateFlow(dt, t)
   for (let i = 0; i < SNOW; i++) { const i3 = i * 3; snowPos[i3 + 1] -= dt * (0.18 + (i % 5) * 0.04); snowPos[i3] += Math.sin(t * 0.25 + i) * 0.001; if (snowPos[i3 + 1] < snowBox.yBot) snowPos[i3 + 1] = snowBox.yTop }
   snowGeo.attributes.position.needsUpdate = true
-  shafts.forEach((s, i) => { s.material.opacity = params.shaftOpacity * (0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
+  // Derive all scene values from depth / brightness / activity + palette
+  const D = params.depth
+  const shaftOp = params.shaftBaseOpacity * (1 - D * 0.8)
+  shafts.forEach((s, i) => { s.material.opacity = shaftOp * (0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
 
-  // Apply scene-level params every frame (presets change these)
-  drawBgGradient(params.bgTop, params.bgMid, params.bgBottom)
-  scene.fog.color.setHex(params.fogColor)
-  scene.fog.density = params.fogDensity
-  renderer.toneMappingExposure = params.toneMappingExposure
+  // Background gradient: interpolate shallow↔deep by depth
+  const lerpHex = (a, b, k) => {
+    const ar = parseInt(a.slice(1, 3), 16), ag = parseInt(a.slice(3, 5), 16), ab = parseInt(a.slice(5, 7), 16)
+    const br = parseInt(b.slice(1, 3), 16), bg = parseInt(b.slice(3, 5), 16), bb = parseInt(b.slice(5, 7), 16)
+    const r = Math.round(ar + (br - ar) * k), g = Math.round(ag + (bg - ag) * k), bl = Math.round(ab + (bb - ab) * k)
+    return '#' + ((r << 16) | (g << 8) | bl).toString(16).padStart(6, '0')
+  }
+  const bgTop = lerpHex(params.bgTopShallow, params.bgTopDeep, D)
+  const bgBot = lerpHex(params.bgBottomShallow, params.bgBottomDeep, D)
+  const bgMid = lerpHex(bgTop, bgBot, 0.5)
+  drawBgGradient(bgTop, bgMid, bgBot)
+
+  // Fog: denser with depth, color interpolated
+  const lerpInt = (a, b, k) => {
+    const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff
+    const br2 = (b >> 16) & 0xff, bg2 = (b >> 8) & 0xff, bb2 = b & 0xff
+    return (Math.round(ar + (br2 - ar) * k) << 16) | (Math.round(ag + (bg2 - ag) * k) << 8) | Math.round(ab + (bb2 - ab) * k)
+  }
+  scene.fog.color.setHex(lerpInt(params.fogColorShallow, params.fogColorDeep, D))
+  scene.fog.density = 0.02 + D * 0.07
+
+  // Exposure from brightness, dimmed by depth
+  renderer.toneMappingExposure = params.brightness * (1.3 - D * 0.7)
+
+  // Lights: dimmed by depth
   hemiLight.color.setHex(params.hemiSkyColor)
   hemiLight.groundColor.setHex(params.hemiGroundColor)
-  hemiLight.intensity = params.hemiIntensity
+  hemiLight.intensity = (0.6 - D * 0.4) * params.brightness
   keyLight.color.setHex(params.keyLightColor)
-  keyLight.intensity = params.keyLightIntensity
+  keyLight.intensity = (1.3 - D * 0.95) * params.brightness
   fillLight.color.setHex(params.fillLightColor)
-  fillLight.intensity = params.fillLightIntensity
+  fillLight.intensity = (0.5 - D * 0.35) * params.brightness
+
+  // Particles
   flowMat.color.setHex(params.particleColor)
   flowMat.size = params.particleSize
-  flowMat.opacity = params.particleOpacity
-  if (!evolutionActive) composer.passes[1].strength = params.bloomStrength
+  flowMat.opacity = params.particleBaseOpacity * (1 - D * 0.5)
+
+  // Bloom: more at shallow (clarity), less at deep
+  if (!evolutionActive) composer.passes[1].strength = 0.4 + (1 - D) * 0.4
 
   // Evolution mode
   if (officialMode && !evolutionActive && getAccumulatedChange() >= EVOLUTION_THRESHOLD) {
@@ -1236,7 +1265,7 @@ renderer.setAnimationLoop((time) => {
       evoFlash.style.opacity = '0'
     } else {
       const pulse = Math.sin(ek * Math.PI)
-      composer.passes[1].strength = params.bloomStrength + pulse * 1.2
+      composer.passes[1].strength = (0.4 + (1 - params.depth) * 0.4) + pulse * 1.2
       evoFlash.style.opacity = String(pulse * 0.25)
       for (const c of corals) { if (!c.removing) for (const m of c.mats) m.emissiveIntensity += pulse * 0.8 }
       if (ek < 0.1) {
