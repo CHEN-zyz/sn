@@ -1206,51 +1206,61 @@ renderer.setAnimationLoop((time) => {
   updateFlow(dt, t)
   for (let i = 0; i < SNOW; i++) { const i3 = i * 3; snowPos[i3 + 1] -= dt * (0.18 + (i % 5) * 0.04); snowPos[i3] += Math.sin(t * 0.25 + i) * 0.001; if (snowPos[i3 + 1] < snowBox.yBot) snowPos[i3 + 1] = snowBox.yTop }
   snowGeo.attributes.position.needsUpdate = true
-  // Derive all scene values from depth / brightness / activity + palette
+  // === Depth-zone based scene derivation ===
+  // Real ocean layers: 표층(0-0.2) → 중층(0.2-0.4) → 약광대(0.4-0.65) → 무광대(0.65-0.85) → 심연(0.85-1)
   const D = params.depth
-  const shaftOp = params.shaftBaseOpacity * (1 - D * 0.8)
-  shafts.forEach((s, i) => { s.material.opacity = shaftOp * (0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
 
-  // Background gradient: interpolate shallow↔deep by depth
-  const lerpHex = (a, b, k) => {
-    const ar = parseInt(a.slice(1, 3), 16), ag = parseInt(a.slice(3, 5), 16), ab = parseInt(a.slice(5, 7), 16)
-    const br = parseInt(b.slice(1, 3), 16), bg = parseInt(b.slice(3, 5), 16), bb = parseInt(b.slice(5, 7), 16)
-    const r = Math.round(ar + (br - ar) * k), g = Math.round(ag + (bg - ag) * k), bl = Math.round(ab + (bb - ab) * k)
-    return '#' + ((r << 16) | (g << 8) | bl).toString(16).padStart(6, '0')
+  // Piecewise interpolation along depth-zone keyframes
+  // Each stop: [depth, R, G, B]
+  const gradTopStops = [[0, 80, 160, 190], [0.2, 55, 130, 170], [0.4, 30, 70, 130], [0.65, 14, 40, 75], [0.85, 6, 18, 40], [1, 4, 8, 16]]
+  const gradBotStops = [[0, 35, 90, 130], [0.2, 25, 65, 100], [0.4, 14, 35, 65], [0.65, 8, 20, 42], [0.85, 4, 10, 22], [1, 2, 4, 8]]
+  const fogStops     = [[0, 45, 100, 140], [0.2, 35, 80, 120], [0.4, 20, 50, 90], [0.65, 10, 28, 55], [0.85, 5, 14, 30], [1, 3, 6, 12]]
+  const fogDenStops  = [[0, 0.02], [0.2, 0.025], [0.4, 0.04], [0.65, 0.06], [0.85, 0.085], [1, 0.1]]
+  const exposStops   = [[0, 1.4], [0.2, 1.15], [0.4, 0.9], [0.65, 0.65], [0.85, 0.45], [1, 0.3]]
+  const hemiStops    = [[0, 0.6], [0.2, 0.45], [0.4, 0.3], [0.65, 0.18], [0.85, 0.08], [1, 0.03]]
+  const keyStops     = [[0, 1.4], [0.2, 1.1], [0.4, 0.7], [0.65, 0.35], [0.85, 0.12], [1, 0.04]]
+  const shaftStops   = [[0, 0.22], [0.2, 0.12], [0.4, 0.06], [0.65, 0.02], [0.85, 0.005], [1, 0]]
+  const bloomStops   = [[0, 0.5], [0.2, 0.6], [0.4, 0.65], [0.65, 0.45], [0.85, 0.25], [1, 0.15]]
+
+  function sampleStops(stops, d) {
+    for (let i = 0; i < stops.length - 1; i++) {
+      if (d <= stops[i + 1][0]) {
+        const k = (d - stops[i][0]) / (stops[i + 1][0] - stops[i][0])
+        if (stops[i].length === 2) return stops[i][1] + (stops[i + 1][1] - stops[i][1]) * k
+        const r = Math.round(stops[i][1] + (stops[i + 1][1] - stops[i][1]) * k)
+        const g = Math.round(stops[i][2] + (stops[i + 1][2] - stops[i][2]) * k)
+        const b = Math.round(stops[i][3] + (stops[i + 1][3] - stops[i][3]) * k)
+        return [r, g, b]
+      }
+    }
+    const last = stops[stops.length - 1]
+    return last.length === 2 ? last[1] : [last[1], last[2], last[3]]
   }
-  const bgTop = lerpHex(params.bgTopShallow, params.bgTopDeep, D)
-  const bgBot = lerpHex(params.bgBottomShallow, params.bgBottomDeep, D)
-  const bgMid = lerpHex(bgTop, bgBot, 0.5)
-  drawBgGradient(bgTop, bgMid, bgBot)
+  const rgbToHex = (c) => '#' + ((c[0] << 16) | (c[1] << 8) | c[2]).toString(16).padStart(6, '0')
+  const rgbToInt = (c) => (c[0] << 16) | (c[1] << 8) | c[2]
 
-  // Fog: denser with depth, color interpolated
-  const lerpInt = (a, b, k) => {
-    const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff
-    const br2 = (b >> 16) & 0xff, bg2 = (b >> 8) & 0xff, bb2 = b & 0xff
-    return (Math.round(ar + (br2 - ar) * k) << 16) | (Math.round(ag + (bg2 - ag) * k) << 8) | Math.round(ab + (bb2 - ab) * k)
-  }
-  scene.fog.color.setHex(lerpInt(params.fogColorShallow, params.fogColorDeep, D))
-  scene.fog.density = 0.02 + D * 0.07
+  const topC = sampleStops(gradTopStops, D), botC = sampleStops(gradBotStops, D)
+  const midC = [Math.round((topC[0] + botC[0]) / 2), Math.round((topC[1] + botC[1]) / 2), Math.round((topC[2] + botC[2]) / 2)]
+  drawBgGradient(rgbToHex(topC), rgbToHex(midC), rgbToHex(botC))
 
-  // Exposure from brightness, dimmed by depth
-  renderer.toneMappingExposure = params.brightness * (1.3 - D * 0.7)
-
-  // Lights: dimmed by depth
+  scene.fog.color.setHex(rgbToInt(sampleStops(fogStops, D)))
+  scene.fog.density = sampleStops(fogDenStops, D)
+  renderer.toneMappingExposure = sampleStops(exposStops, D) * params.brightness
   hemiLight.color.setHex(params.hemiSkyColor)
   hemiLight.groundColor.setHex(params.hemiGroundColor)
-  hemiLight.intensity = (0.6 - D * 0.4) * params.brightness
+  hemiLight.intensity = sampleStops(hemiStops, D) * params.brightness
   keyLight.color.setHex(params.keyLightColor)
-  keyLight.intensity = (1.3 - D * 0.95) * params.brightness
+  keyLight.intensity = sampleStops(keyStops, D) * params.brightness
   fillLight.color.setHex(params.fillLightColor)
-  fillLight.intensity = (0.5 - D * 0.35) * params.brightness
+  fillLight.intensity = sampleStops(keyStops, D) * 0.4 * params.brightness
 
-  // Particles
+  const shaftOp = sampleStops(shaftStops, D)
+  shafts.forEach((s, i) => { s.material.opacity = shaftOp * (0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
+
   flowMat.color.setHex(params.particleColor)
   flowMat.size = params.particleSize
-  flowMat.opacity = params.particleBaseOpacity * (1 - D * 0.5)
-
-  // Bloom: more at shallow (clarity), less at deep
-  if (!evolutionActive) composer.passes[1].strength = 0.4 + (1 - D) * 0.4
+  flowMat.opacity = params.particleBaseOpacity * clamp(1 - D * 0.6, 0.15, 1)
+  if (!evolutionActive) composer.passes[1].strength = sampleStops(bloomStops, D)
 
   // Evolution mode
   if (officialMode && !evolutionActive && getAccumulatedChange() >= EVOLUTION_THRESHOLD) {
@@ -1265,7 +1275,7 @@ renderer.setAnimationLoop((time) => {
       evoFlash.style.opacity = '0'
     } else {
       const pulse = Math.sin(ek * Math.PI)
-      composer.passes[1].strength = (0.4 + (1 - params.depth) * 0.4) + pulse * 1.2
+      composer.passes[1].strength = sampleStops(bloomStops, params.depth) + pulse * 1.2
       evoFlash.style.opacity = String(pulse * 0.25)
       for (const c of corals) { if (!c.removing) for (const m of c.mats) m.emissiveIntensity += pulse * 0.8 }
       if (ek < 0.1) {
