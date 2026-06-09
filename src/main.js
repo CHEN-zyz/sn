@@ -524,12 +524,8 @@ function updatePV(dt) {
     }
   })
 
-  // After all corals appear (18s), accelerating rotation for 8s → exactly one full turn back to front
-  if (pvElapsed > 18) {
-    const rt = pvElapsed - 18  // seconds since rotation started
-    // θ = ½at², a = 2π / (½ * 8²) = π/16
-    reef.rotation.y = (Math.PI / 16) * rt * rt  // accelerating, reaches 2π at t=8
-  }
+  // Uniform acceleration entire PV: θ = (π/338) × t², reaches 2π at t=26 → back to front
+  reef.rotation.y = (Math.PI / 338) * pvElapsed * pvElapsed
 
   // End PV at ~26s
   if (pvElapsed >= 26) {
@@ -970,7 +966,7 @@ renderer.setAnimationLoop((time) => {
   const dt = Math.min(timer.getDelta(), 0.05)
   const t = timer.getElapsed()
 
-  if (!focused && !camTween) reef.rotation.y += dt * 0.06
+  if (!focused && !camTween && !pvPlaying) reef.rotation.y += dt * 0.06
 
   for (let ci = corals.length - 1; ci >= 0; ci--) {
     const c = corals[ci]
