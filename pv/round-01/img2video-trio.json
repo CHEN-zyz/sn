@@ -1,0 +1,12 @@
+{
+  "mode": "img2video",
+  "model": "vidu2.0",
+  "shot": "trio",
+  "prompt": "Three different bioluminescent corals float in the same dark underwater digital space. Each coral has a slightly different breathing rhythm and glow. The camera drifts slowly sideways, preserving the three coral shapes and colors. No interface, no text, no animals, no plants.",
+  "task_id": "961424072678354944",
+  "quoted_credits": 20,
+  "state": "success",
+  "actual_credits": 20,
+  "err_code": "",
+  "file": "pv/round-01/img2video-trio.mp4"
+}

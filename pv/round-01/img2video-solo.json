@@ -1,0 +1,12 @@
+{
+  "mode": "img2video",
+  "model": "vidu2.0",
+  "shot": "solo",
+  "prompt": "A single bioluminescent coral breathes softly in a dark underwater digital space. Very slow subtle motion, calm drifting particles, preserve the exact coral shape, color and composition. No text, no interface, no animals, no plants.",
+  "task_id": "961422938630807552",
+  "quoted_credits": 20,
+  "state": "success",
+  "actual_credits": 20,
+  "err_code": "",
+  "file": "pv/round-01/img2video-solo.mp4"
+}

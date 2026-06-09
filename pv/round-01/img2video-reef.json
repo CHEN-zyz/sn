@@ -1,0 +1,12 @@
+{
+  "mode": "img2video",
+  "model": "vidu2.0",
+  "shot": "reef",
+  "prompt": "A small reef of different glowing corals appears in deep black water. The camera slowly pulls back, revealing that the individual coral is part of a larger living reef. Particles drift calmly through the scene. Preserve the coral shapes and colors, subtle glow, quiet cinematic mood, no text, no interface.",
+  "task_id": "961424279507853312",
+  "quoted_credits": 20,
+  "state": "success",
+  "actual_credits": 20,
+  "err_code": "",
+  "file": "pv/round-01/img2video-reef.mp4"
+}

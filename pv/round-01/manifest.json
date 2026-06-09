@@ -1,0 +1,35 @@
+{
+  "mode": "multiframe",
+  "model": "viduq2-turbo",
+  "duration": 5,
+  "resolution": "720p",
+  "shots": [
+    {
+      "id": "A_trace",
+      "start": "captures/void.png",
+      "end": "captures/signal.png",
+      "seed": 61401,
+      "prompt": "A vast dark underwater void. One small cyan bioluminescent particle drifts slowly forward, then moves toward a barely visible organic coral silhouette in the distance. Sparse suspended particles, subtle volumetric light, deep black negative space, restrained cinematic motion. The camera follows with a very slow forward drift. Preserve the final silhouette. No fish, no plants, no text, no interface, no sudden movement."
+    },
+    {
+      "id": "B_gather",
+      "start": "captures/signal.png",
+      "end": "captures/forming.png",
+      "seed": 61402,
+      "prompt": "The cyan particle reaches the faint coral silhouette. Tiny luminous traces are gently drawn toward it like slow underwater currents. Thin cyan and violet veins gradually outline the coral from inside while fine particles gather around the branches. Organic and digital at the same time, black deep-sea background, continuous slow camera push-in. Preserve the coral shape and composition. No explosion, no creatures, no text."
+    },
+    {
+      "id": "C_form",
+      "start": "captures/forming.png",
+      "end": "captures/solo.png",
+      "seed": 61403,
+      "prompt": "The half-formed luminous coral slowly gains physical material. Fine particles settle onto its glowing branches and form a translucent organic surface. The finished coral releases one soft pulse of light like its first breath. Preserve the exact coral silhouette, position, and final composition. Minimal camera motion, restrained cinematic deep sea, no extra objects, no text, no interface."
+    }
+  ],
+  "task_id": "961423248929640448",
+  "quoted_credits": 120,
+  "state": "success",
+  "actual_credits": 120,
+  "err_code": "",
+  "file": "pv/round-01/multiframe-A-B-C.mp4"
+}

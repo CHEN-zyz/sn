@@ -10,7 +10,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { createNoise3D } from 'simplex-noise'
 import { createOfficialUI } from './official-ui.js'
-import { params, getAccumulatedChange, resetAccumulatedChange, EVOLUTION_THRESHOLD } from './ecosystem-params.js'
+import { params, getAccumulatedChange, resetAccumulatedChange, EVOLUTION_THRESHOLD, onParamChange } from './ecosystem-params.js'
 import './style.css'
 import './official-ui.css'
 
@@ -654,7 +654,6 @@ function rebuildConnections() {
   geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
   lineMesh = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x4ac8ff, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false, fog: true }))
   reef.add(lineMesh)
-  if (typeof updateHUD === 'function') updateHUD()
 }
 
 function updateOverview() {
@@ -698,7 +697,7 @@ function updateFlow(dt, t) {
     const i3 = i * 3
     const dx = flowPos[i3] - mouseWorld.x, dy = flowPos[i3 + 1] - mouseWorld.y, dz = flowPos[i3 + 2] - mouseWorld.z
     const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
-    const boost = dist < 3 ? 1 + (1 - dist / 3) * (params.mouseParticleBoost - 1) : 1
+    const boost = dist < 3 ? 1 + (1 - dist / 3) * 1.5 : 1
     flowPos[i3] = wrap(flowPos[i3] + Math.sin(t * 0.4 + flowSeed[i]) * 0.004 * boost + dt * speed * 0.3 * boost)
     flowPos[i3 + 1] = wrap(flowPos[i3 + 1] + Math.cos(t * 0.35 + flowSeed[i]) * 0.003 * boost - dt * 0.06)
     flowPos[i3 + 2] = wrap(flowPos[i3 + 2] + Math.sin(t * 0.3 + flowSeed[i] * 1.3) * 0.004 * boost)
@@ -708,7 +707,6 @@ function updateFlow(dt, t) {
   }
   flowGeo.attributes.position.needsUpdate = true
   flowGeo.attributes.color.needsUpdate = true
-  flowMat.opacity = 0.62 * params.particleDensity
 }
 
 const SNOW = 800, snowBox = { x: 16, yTop: 10, yBot: -8, z: 16 }
@@ -910,11 +908,15 @@ function updateHUD() {
   if (!officialMode) return
   const active = corals.filter((c) => !c.removing && !c.isIntroPreview)
   const el = (id) => document.getElementById(id)
-  el('hud-count').textContent = active.length
-  const connCount = lineMesh ? Math.floor(lineMesh.geometry.attributes.position.count / 42) : 0
-  el('hud-connections').textContent = connCount
+  el('hud-count').textContent = `${active.length}개`
+  // Each coral connects to min(connectionDistance, neighbors) nearest, each curve = 40 verts
+  const connCount = lineMesh ? Math.floor(lineMesh.geometry.attributes.position.count / 40) : 0
+  el('hud-connections').textContent = `${connCount}개`
   const catCounts = {}
-  active.forEach((c) => { const n = c.data.cat.name; catCounts[n] = (catCounts[n] || 0) + 1 })
+  active.forEach((c) => {
+    if (c.data.subcats) c.data.subcats.forEach((s) => { catCounts[s.cat.name] = (catCounts[s.cat.name] || 0) + 1 })
+    else { const n = c.data.cat.name; catCounts[n] = (catCounts[n] || 0) + 1 }
+  })
   const dominant = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]
   el('hud-dominant').textContent = dominant ? officialCategoryName(dominant[0]) : '-'
 }
@@ -1021,9 +1023,10 @@ window.addEventListener('pointermove', (e) => {
     const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y
     if (!isDragging && Math.hypot(dx, dy) > 6) { isDragging = true; controls.enabled = false }
     if (isDragging) {
-      dragCoral.spinSpeed = 0.04 + clamp(dx * 0.002, -0.3, 0.3)
-      dragCoral.group.rotation.z = clamp(dx * 0.003, -0.4, 0.4)
-      dragCoral.group.rotation.x = clamp(dy * 0.003, -0.4, 0.4)
+      dragCoral.spinSpeed = 0.04 + clamp(dx * 0.005, -0.5, 0.5)
+      dragCoral.group.rotation.z = clamp(dx * 0.008, -0.6, 0.6)
+      dragCoral.group.rotation.x = clamp(dy * 0.008, -0.6, 0.6)
+      for (const m of dragCoral.mats) m.emissiveIntensity = 0.8
     }
   }
 })
@@ -1041,6 +1044,10 @@ renderer.domElement.addEventListener('dblclick', (e) => {
   target.x = clamp(target.x, -10, 10)
   target.z = clamp(target.z, -10, 10)
   target.y = (Math.random() - 0.5) * 0.8
+  // Ensure minimum distance from existing corals
+  const minDist = 2.0
+  const tooClose = corals.some((c) => !c.removing && c.group.position.distanceTo(target) < minDist)
+  if (tooClose) { target.x += (Math.random() - 0.5) * 3; target.z += (Math.random() - 0.5) * 3 }
   const shuffled = [...CATEGORIES].sort(() => Math.random() - 0.5)
   const cats = shuffled.slice(0, 3)
   const data = {
@@ -1104,6 +1111,7 @@ if (officialMode) {
   })
   if (modelsLoaded >= MODEL_PATHS.length) officialUI.onModelsReady()
 }
+onParamChange((key) => { if (key === 'connectionDistance') rebuildConnections() })
 
 renderer.setAnimationLoop((time) => {
   timer.update(time)
@@ -1146,15 +1154,14 @@ renderer.setAnimationLoop((time) => {
     )
     if (!focused) c.group.rotation.y += c.spinSpeed * dt
 
-    // Mouse proximity → coral sway
+    // Mouse proximity → coral sway (screen-space distance for reliable detection)
     if (officialMode && !focused) {
-      const wp = c.group.getWorldPosition(new THREE.Vector3())
-      const md = wp.distanceTo(mouseWorld)
-      if (md < params.mouseSwayRadius) {
-        const inf = 1 - md / params.mouseSwayRadius
-        const sd = new THREE.Vector3().subVectors(mouseWorld, wp).normalize()
-        c.group.rotation.z += sd.x * inf * params.mouseSwayStrength * Math.sin(t * 3 + c.phase) * dt * 8
-        c.group.rotation.x += sd.z * inf * params.mouseSwayStrength * Math.sin(t * 2.5 + c.phase) * dt * 8
+      const wp = c.group.getWorldPosition(new THREE.Vector3()).project(camera)
+      const screenDist = Math.hypot(wp.x - mouseNDC.x, wp.y - mouseNDC.y)
+      if (screenDist < 0.6) {
+        const inf = 1 - screenDist / 0.6
+        c.group.rotation.z += (mouseNDC.x - wp.x) * inf * params.mouseSwayStrength * dt * 4
+        c.group.rotation.x -= (mouseNDC.y - wp.y) * inf * params.mouseSwayStrength * dt * 4
       }
     }
 
@@ -1171,7 +1178,15 @@ renderer.setAnimationLoop((time) => {
   updateFlow(dt, t)
   for (let i = 0; i < SNOW; i++) { const i3 = i * 3; snowPos[i3 + 1] -= dt * (0.18 + (i % 5) * 0.04); snowPos[i3] += Math.sin(t * 0.25 + i) * 0.001; if (snowPos[i3 + 1] < snowBox.yBot) snowPos[i3 + 1] = snowBox.yTop }
   snowGeo.attributes.position.needsUpdate = true
-  shafts.forEach((s, i) => { s.material.opacity = 0.03 + 0.025 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5)); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 + mouseNDC.x * params.lightFollowStrength * (1 + i * 0.3) })
+  shafts.forEach((s, i) => { s.material.opacity = params.shaftOpacity * (0.6 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.35 + i * 1.5))); s.position.x = s.userData.bx + Math.sin(t * 0.12 + i) * 0.4 })
+
+  // Apply scene-level params every frame
+  scene.fog.density = params.fogDensity
+  renderer.toneMappingExposure = params.toneMappingExposure
+  flowMat.color.setHex(params.particleColor)
+  flowMat.size = params.particleSize
+  flowMat.opacity = params.particleOpacity
+  if (!evolutionActive) composer.passes[1].strength = params.bloomStrength
 
   // Evolution mode
   if (officialMode && !evolutionActive && getAccumulatedChange() >= EVOLUTION_THRESHOLD) {
@@ -1183,11 +1198,10 @@ renderer.setAnimationLoop((time) => {
     const ek = (t - evolutionStart) / EVOLUTION_DURATION
     if (ek >= 1) {
       evolutionActive = false
-      composer.passes[1].strength = 0.65
       evoFlash.style.opacity = '0'
     } else {
       const pulse = Math.sin(ek * Math.PI)
-      composer.passes[1].strength = 0.65 + pulse * 1.2
+      composer.passes[1].strength = params.bloomStrength + pulse * 1.2
       evoFlash.style.opacity = String(pulse * 0.25)
       for (const c of corals) { if (!c.removing) for (const m of c.mats) m.emissiveIntensity += pulse * 0.8 }
       if (ek < 0.1) {
@@ -1201,6 +1215,9 @@ renderer.setAnimationLoop((time) => {
       }
     }
   }
+
+  // HUD update (~1 per second)
+  if (officialMode && Math.floor(t) !== Math.floor(t - dt)) updateHUD()
 
   if (camTween) updateCamTween()
   else controls.update()
