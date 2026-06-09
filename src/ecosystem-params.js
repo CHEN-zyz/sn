@@ -1,7 +1,8 @@
-// Centralised tunable parameters for the entire scene atmosphere + coral behavior.
+// Scene atmosphere parameters. Presets and sliders control the environment;
+// corals respond naturally through lighting, bloom, fog.
 
 export const params = {
-  // Scene atmosphere
+  // Scene atmosphere (controlled by presets + sliders)
   bgColor: 0x000000,
   fogColor: 0x010509,
   fogDensity: 0.04,
@@ -19,11 +20,7 @@ export const params = {
   particleOpacity: 0.62,
   shaftOpacity: 0.05,
 
-  // Coral behavior
-  growthSpeed: 1.0,
-  connectionDistance: 2,
-  glowIntensity: 1.0,
-  flowSpeed: 1.0,
+  // Mouse interactivity (not in presets, fixed behavior)
   mouseSwayStrength: 1.0,
 }
 
@@ -49,7 +46,7 @@ export function applyPreset(preset) {
   })
 }
 
-// --- scene presets: each defines a complete visual atmosphere ---
+// --- scene presets: purely atmosphere, no coral-specific values ---
 export const PRESETS = {
   '기본': {
     bgColor: 0x000000, fogColor: 0x010509, fogDensity: 0.04,
@@ -59,7 +56,6 @@ export const PRESETS = {
     fillLightColor: 0x4488cc, fillLightIntensity: 0.3,
     particleColor: 0x5ad0ff, particleSize: 0.045, particleOpacity: 0.62,
     shaftOpacity: 0.05,
-    growthSpeed: 1.0, connectionDistance: 2, glowIntensity: 1.0, flowSpeed: 1.0,
   },
   '심해': {
     bgColor: 0x030a1a, fogColor: 0x0a1a38, fogDensity: 0.06,
@@ -69,7 +65,6 @@ export const PRESETS = {
     fillLightColor: 0x1a3366, fillLightIntensity: 0.2,
     particleColor: 0x2255aa, particleSize: 0.035, particleOpacity: 0.4,
     shaftOpacity: 0.03,
-    growthSpeed: 0.5, connectionDistance: 1, glowIntensity: 0.4, flowSpeed: 0.3,
   },
   '생물발광': {
     bgColor: 0x041a14, fogColor: 0x0a3828, fogDensity: 0.03,
@@ -79,7 +74,6 @@ export const PRESETS = {
     fillLightColor: 0x33cc88, fillLightIntensity: 0.5,
     particleColor: 0x55ffbb, particleSize: 0.065, particleOpacity: 0.9,
     shaftOpacity: 0.12,
-    growthSpeed: 0.8, connectionDistance: 3, glowIntensity: 3.0, flowSpeed: 0.7,
   },
   '급성장': {
     bgColor: 0x180a02, fogColor: 0x2a1508, fogDensity: 0.025,
@@ -89,17 +83,21 @@ export const PRESETS = {
     fillLightColor: 0xdd6622, fillLightIntensity: 0.4,
     particleColor: 0xff7733, particleSize: 0.06, particleOpacity: 0.8,
     shaftOpacity: 0.1,
-    growthSpeed: 2.5, connectionDistance: 4, glowIntensity: 1.8, flowSpeed: 2.5,
   },
 }
 
 export const EVOLUTION_THRESHOLD = 1.5
 
+// Sliders: scene atmosphere only — what each does to the visual:
+// 블룸 → coral glow spreads, edges blur, dreamy feel
+// 안개 → distant corals fade into background tint
+// 밝기 → overall scene brightness
+// 입자 → floating underwater debris visibility
+// 빛줄기 → overhead light shafts visible in the water
 export const PARAM_DEFS = [
-  { key: 'growthSpeed', label: '성장 속도', min: 0.2, max: 3.0, step: 0.1 },
-  { key: 'connectionDistance', label: '연결 수', min: 0, max: 5, step: 1 },
-  { key: 'glowIntensity', label: '발광 강도', min: 0.1, max: 3.0, step: 0.1 },
-  { key: 'flowSpeed', label: '흐름 속도', min: 0.1, max: 3.0, step: 0.1 },
-  { key: 'bloomStrength', label: '블룸', min: 0.1, max: 2.0, step: 0.05 },
-  { key: 'fogDensity', label: '안개', min: 0.01, max: 0.1, step: 0.005 },
+  { key: 'bloomStrength', label: '블룸 강도', min: 0.1, max: 2.0, step: 0.05 },
+  { key: 'fogDensity', label: '안개 농도', min: 0.01, max: 0.1, step: 0.005 },
+  { key: 'toneMappingExposure', label: '밝기', min: 0.3, max: 1.5, step: 0.05 },
+  { key: 'particleOpacity', label: '입자 밝기', min: 0.1, max: 1.0, step: 0.05 },
+  { key: 'shaftOpacity', label: '빛줄기', min: 0, max: 0.2, step: 0.01 },
 ]

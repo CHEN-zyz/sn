@@ -10,7 +10,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js'
 import { createNoise3D } from 'simplex-noise'
 import { createOfficialUI } from './official-ui.js'
-import { params, getAccumulatedChange, resetAccumulatedChange, EVOLUTION_THRESHOLD, onParamChange } from './ecosystem-params.js'
+import { params, getAccumulatedChange, resetAccumulatedChange, EVOLUTION_THRESHOLD } from './ecosystem-params.js'
 import './style.css'
 import './official-ui.css'
 
@@ -645,7 +645,7 @@ function rebuildConnections() {
   const curves = []
   for (let i = 0; i < active.length; i++) {
     const dists = active.map((c, j) => ({ j, d: i === j ? Infinity : active[i].group.position.distanceTo(c.group.position) })).sort((a, b) => a.d - b.d)
-    for (let k = 0; k < Math.min(params.connectionDistance, active.length - 1); k++) {
+    for (let k = 0; k < Math.min(2, active.length - 1); k++) {
       const a = active[i].group.position, b = active[dists[k].j].group.position
       const mid = a.clone().add(b).multiplyScalar(0.5)
       mid.y += 0.3 + a.distanceTo(b) * 0.12
@@ -696,7 +696,7 @@ const flowMat = new THREE.PointsMaterial({ size: 0.045, map: particleTex, color:
 scene.add(new THREE.Points(flowGeo, flowMat))
 function updateFlow(dt, t) {
   const wrap = (v) => (v > FLOW_RADIUS ? v - 2 * FLOW_RADIUS : v < -FLOW_RADIUS ? v + 2 * FLOW_RADIUS : v)
-  const speed = FLOW_SPEED * params.flowSpeed
+  const speed = FLOW_SPEED
   for (let i = 0; i < FLOW_MAX; i++) {
     const i3 = i * 3
     const dx = flowPos[i3] - mouseWorld.x, dy = flowPos[i3 + 1] - mouseWorld.y, dz = flowPos[i3 + 2] - mouseWorld.z
@@ -1115,7 +1115,6 @@ if (officialMode) {
   })
   if (modelsLoaded >= MODEL_PATHS.length) officialUI.onModelsReady()
 }
-onParamChange((key) => { if (key === 'connectionDistance') rebuildConnections() })
 
 renderer.setAnimationLoop((time) => {
   timer.update(time)
@@ -1137,15 +1136,14 @@ renderer.setAnimationLoop((time) => {
 
     let growK = 1
     const ge = t - c.growStart
-    const effectiveGrowDur = GROW_DUR / params.growthSpeed
-    if (ge < effectiveGrowDur) growK = easeOutBack(clamp(ge / effectiveGrowDur, 0, 1))
+    if (ge < GROW_DUR) growK = easeOutBack(clamp(ge / GROW_DUR, 0, 1))
     else if (!c.grown) c.grown = true
 
     c.fade += (c.fadeTarget - c.fade) * 0.08
     const isHovered = (c === hovered && !focused) ? 1 : 0
     const p = 0.5 + 0.5 * Math.sin(t * c.breathFreq + c.phase)
     for (const m of c.mats) {
-      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1) * params.glowIntensity
+      m.emissiveIntensity = (0.1 + 0.3 * p + isHovered * 0.4) * growK * c.fade * Math.max(c.data.recency, 0.3) * (c.data.captureGlow ?? 1)
       m.opacity = clamp(c.fade * (0.4 + c.data.weight * 0.6) * (c.data.captureOpacity ?? 1), 0.02, 1)
     }
     const scaleFade = 0.7 + 0.3 * c.fade
