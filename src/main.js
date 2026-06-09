@@ -416,6 +416,7 @@ function startPV() {
   pvCards.forEach((el) => el.remove())
   pvCards.length = 0
   clearIntroPreview()
+  reef.rotation.y = 0
   setParam('depth', 1.0)
   controls.enableRotate = false
   controls.enablePan = false
@@ -522,9 +523,6 @@ function updatePV(dt) {
       c._pvCard.style.opacity = '0'
     }
   })
-
-  // Slow reef rotation during PV
-  reef.rotation.y += dt * 0.03
 
   // End PV at ~26s
   if (pvElapsed >= 26) {
