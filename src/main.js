@@ -270,7 +270,7 @@ function addCoralFromData(data) {
   div.textContent = labelName
   div.style.opacity = '0'
   const label = new CSS2DObject(div)
-  label.position.set(0, (size.y * baseNorm * yStretch) / 2 + 0.6, 0)
+  label.position.set(0, (size.y * baseNorm * yStretch) / 2 + 0.15, 0)
   label.layers.set(0)
   group.add(label)
 

@@ -300,6 +300,7 @@ export function createOfficialUI(api) {
 
       <section class="product-screen coral-screen" data-screen="coral">
         <aside class="weight-panel glass-panel">
+          <div class="weight-inner">
           <button class="back-button" type="button">← 전체 산호</button>
           <span class="eyebrow">ALGORITHM CORAL</span>
           <h1 class="coral-name"></h1>
@@ -320,6 +321,7 @@ export function createOfficialUI(api) {
               <div class="preset-bar"></div>
               <div class="param-sliders"></div>
             </div>
+          </div>
           </div>
         </aside>
         <div class="coral-actions">

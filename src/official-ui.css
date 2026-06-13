@@ -446,6 +446,13 @@ body.official-app:not(.official-overview-view) .label {
   padding: 24px;
   overflow: auto;
   pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.weight-inner {
+  margin: auto 0;
+  width: 100%;
 }
 
 .glass-panel {

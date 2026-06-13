@@ -22,7 +22,7 @@ canvas {
 
 #screenshot-btn {
   position: fixed;
-  bottom: 20px;
+  top: 58px;
   right: 20px;
   z-index: 20;
   width: 40px;
