@@ -440,7 +440,7 @@ body.official-app:not(.official-overview-view) .label {
 .weight-panel {
   position: fixed;
   top: 80px;
-  bottom: 28px;
+  bottom: 80px;
   left: 26px;
   width: min(330px, 30vw);
   padding: 24px;
